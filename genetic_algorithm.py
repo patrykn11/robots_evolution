@@ -13,7 +13,7 @@ from evaluation import evaluate as eval_function
 class GeneticAlgorithm:
     def __init__(self,
                  pop_size=80,
-                 generations=3,
+                 generations=50,
                  mutation_rate=0.25,
                  robot_shape=(5, 5)):
         
