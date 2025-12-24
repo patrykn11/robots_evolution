@@ -12,16 +12,16 @@ from evaluation import evaluate
 
 class GeneticAlgorithm:
     def __init__(
-        self, 
+        self,
         pop_size: int = 80,
         generations: int = 50,
         mutation_rate: float = 0.25,
         crossover_probability: float = 0.8,
-        robot_shape: Tuple[int, int] = (5, 5),
+        robot_shape: Tuple[int, int] = (5, 5), 
         voxel_types: List[int] = [0, 1, 2, 3, 4],
-        selection_func: Optional[Callable] = None,
-        crossover_func: Optional[Callable] = None,
-        mutation_func: Optional[Callable] = None
+        selection_func=None,
+        crossover_func=None,
+        mutation_func=None
     ):
         
         self.pop_size = pop_size
@@ -71,11 +71,14 @@ class GeneticAlgorithm:
             child_body = p1.body.copy()
             axis = np.random.randint(0, 2)
             cut = np.random.randint(1, self.robot_shape[axis] - 1)
-            if axis == 0: child_body[cut:, :] = p2.body[cut:, :]
-            else: child_body[:, cut:] = p2.body[:, cut:]
+            if axis == 0:
+                child_body[cut:, :] = p2.body[cut:, :]
+            else:
+                child_body[:, cut:] = p2.body[:, cut:]
             
             temp = Structure(child_body)
-            if temp.is_valid(): return temp
+            if temp.is_valid():
+                return temp
         return p1
 
     def mutate(self, next_gen: List[Structure]) -> List[Structure]:
@@ -98,7 +101,8 @@ class GeneticAlgorithm:
             r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
             new_body[r, c] = np.random.choice(self.voxel_types)
             temp = Structure(new_body)
-            if temp.is_valid(): return temp
+            if temp.is_valid():
+                return temp
         return parent
 
     def evaluate_population(self, pool) -> None:
@@ -106,7 +110,7 @@ class GeneticAlgorithm:
         for ind, fit in zip(self.population, fitness_scores):
             ind.fitness = fit
 
-    def run(self) -> Optional[Structure]:
+    def run(self) -> Structure:
         with multiprocessing.Pool(processes=self.num_workers) as pool:
             for gen in range(self.generations):
                 self.evaluate_population(pool)

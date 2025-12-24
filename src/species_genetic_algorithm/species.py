@@ -1,3 +1,7 @@
+import copy
+import numpy as np
+
+
 class Species:
     def __init__(self, representative):
         self.representative = copy.deepcopy(representative)

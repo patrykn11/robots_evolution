@@ -1,10 +1,11 @@
 import gymnasium as gym
 import numpy as np
-from genetic_algorithm import GeneticAlgorithm
+from default_genetic_algorithm.genetic_algorithm import GeneticAlgorithm
+from species_genetic_algorithm.genetic_algorithm import SpeciesGeneticAlgorithm
 from controller import Controller
-
+from species_genetic_algorithm.species import Species
 if __name__ == "__main__":
-    ga = GeneticAlgorithm()
+    ga = SpeciesGeneticAlgorithm()
     winner = ga.run()
     muscle_indices = np.where((winner.body == 3) | (winner.body == 4))
     muscle_x = muscle_indices[1]
