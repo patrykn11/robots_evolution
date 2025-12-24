@@ -2,6 +2,7 @@ import numpy as np
 import random
 import copy
 import multiprocessing
+from typing import List, Tuple, Optional, Callable
 import gymnasium as gym
 
 from evogym import sample_robot
@@ -10,9 +11,18 @@ from controller import Controller
 from evaluation import evaluate 
 
 class GeneticAlgorithm:
-    def __init__(self, pop_size=80, generations=50, mutation_rate=0.25, crossover_probability=0.8, 
-                 robot_shape=(5, 5), voxel_types=[0, 1, 2, 3, 4],
-                 selection_func=None, crossover_func=None, mutation_func=None):
+    def __init__(
+        self, 
+        pop_size: int = 80,
+        generations: int = 50,
+        mutation_rate: float = 0.25,
+        crossover_probability: float = 0.8,
+        robot_shape: Tuple[int, int] = (5, 5),
+        voxel_types: List[int] = [0, 1, 2, 3, 4],
+        selection_func: Optional[Callable] = None,
+        crossover_func: Optional[Callable] = None,
+        mutation_func: Optional[Callable] = None
+    ):
         
         self.pop_size = pop_size
         self.generations = generations
@@ -30,11 +40,11 @@ class GeneticAlgorithm:
         self.crossover_strategy = crossover_func if crossover_func else self.crossover
         self.mutation_strategy = mutation_func if mutation_func else self.mutate
 
-    def _create_random_structure(self):
+    def _create_random_structure(self) -> Structure:
         body, connections = sample_robot(self.robot_shape)
         return Structure(body)
 
-    def selection(self):
+    def selection(self) -> List[Structure]:
         self.population.sort(key=lambda x: x.fitness, reverse=True)
         if self.population[0].fitness > self.best_fit:
             self.best_fit = self.population[0].fitness
@@ -42,7 +52,7 @@ class GeneticAlgorithm:
         
         return self.population[:self.pop_size // 2]
 
-    def crossover(self, parents):
+    def crossover(self, parents: List[Structure]) -> List[Structure]:
         next_gen = [copy.deepcopy(self.best_robot)]
         
         while len(next_gen) < self.pop_size:
@@ -56,7 +66,7 @@ class GeneticAlgorithm:
             next_gen.append(child)
         return next_gen
 
-    def _do_crossover_body(self, p1, p2):
+    def _do_crossover_body(self, p1: Structure, p2: Structure) -> Structure:
         for _ in range(20):
             child_body = p1.body.copy()
             axis = np.random.randint(0, 2)
@@ -68,7 +78,7 @@ class GeneticAlgorithm:
             if temp.is_valid(): return temp
         return p1
 
-    def mutate(self, next_gen):
+    def mutate(self, next_gen: List[Structure]) -> List[Structure]:
         mutated_gen = []
         for ind in next_gen:
             if ind == self.best_robot:
@@ -82,7 +92,7 @@ class GeneticAlgorithm:
                 mutated_gen.append(ind)
         return mutated_gen
 
-    def _do_mutation_body(self, parent):
+    def _do_mutation_body(self, parent: Structure) -> Structure:
         for _ in range(20):
             new_body = parent.body.copy()
             r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
@@ -91,12 +101,12 @@ class GeneticAlgorithm:
             if temp.is_valid(): return temp
         return parent
 
-    def evaluate_population(self, pool):
+    def evaluate_population(self, pool) -> None:
         fitness_scores = pool.map(evaluate, self.population)
         for ind, fit in zip(self.population, fitness_scores):
             ind.fitness = fit
 
-    def run(self):
+    def run(self) -> Optional[Structure]:
         with multiprocessing.Pool(processes=self.num_workers) as pool:
             for gen in range(self.generations):
                 self.evaluate_population(pool)
