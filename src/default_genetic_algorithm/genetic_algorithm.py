@@ -8,7 +8,7 @@ import gymnasium as gym
 from evogym import sample_robot
 from structure import Structure
 from controller import Controller
-from evaluation import evaluate 
+from evaluation import evaluate
 
 class GeneticAlgorithm:
     def __init__(
@@ -17,7 +17,7 @@ class GeneticAlgorithm:
         generations: int = 50,
         mutation_rate: float = 0.25,
         crossover_probability: float = 0.8,
-        robot_shape: Tuple[int, int] = (5, 5), 
+        robot_shape: Tuple[int, int] = (5, 5),
         voxel_types: List[int] = [0, 1, 2, 3, 4],
         selection_func=None,
         crossover_func=None,
