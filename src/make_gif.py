@@ -12,7 +12,6 @@ from PIL import Image, ImageDraw, ImageFont
 from controller import Controller
 from structure import Structure 
 
-EXPERIMENT_DIR = "results/test_run"
 
 def add_text_to_frame(frame, text):
     """
