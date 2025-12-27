@@ -1,62 +1,45 @@
 import numpy as np
 import random
 import copy
-import multiprocessing
-from typing import List, Tuple, Optional, Callable
-from evogym import sample_robot
+from typing import List, Tuple
 from structure import Structure
-from evaluation import evaluate
-from species_genetic_algorithm.species import Species
+from algorithms.species_genetic_algorithm.species import Species
+from algorithms.base_genetic_algorithm import BaseGeneticAlgorithm
 
 
-class SpeciesGeneticAlgorithm:
+class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
     def __init__(
         self,
-        pop_size: int = 100,
-        generations: int = 80,
+        experiment_name: str,
         target_species: int = 6,
         mutation_rate: float = 0.5,
         crossover_probability: float = 0.7,
         robot_shape: Tuple[int, int] = (5, 5),
         voxel_types: List[int] = [0, 1, 2, 3, 4],
-        selection_func=None,
-        crossover_func=None,
-        mutate_func=None
+        pop_size=100, 
+        generations=80, 
     ):
-        self.pop_size = pop_size
-        self.generations = generations
+        super().__init__(
+            experiment_name, 
+            pop_size=pop_size, 
+            generations=generations, 
+            robot_shape=robot_shape,
+            voxel_types=voxel_types,
+        )
         self.target_species = target_species
         self.mutation_rate = mutation_rate
         self.crossover_probability = crossover_probability
-        self.robot_shape = robot_shape
-        self.voxel_types = voxel_types
-        
         self.threshold = 0.2
-        
-        self.population = [self._create_random_structure() for _ in range(self.pop_size)]
         self.species = []
-        self.best_robot = None
-        self.best_fit = -np.inf
-        self.num_workers = multiprocessing.cpu_count()
-
-        self.selection_strategy = selection_func if selection_func else self.selection
-        self.crossover_strategy = crossover_func if crossover_func else self.crossover
-        self.mutate_strategy = mutate_func if mutate_func else self.mutate
-
-    def _create_random_structure(self) -> Structure:
-        body, _ = sample_robot(self.robot_shape)
-        return Structure(body)
 
     def get_distance(self, ind1: Structure, ind2: Structure) -> float:
         diff = np.sum(ind1.body != ind2.body)
         return diff / 25.0
 
-    def evaluate_population(self, pool):
-        fitness_scores = pool.map(evaluate, self.population)
-        for ind, fit in zip(self.population, fitness_scores):
-            ind.fitness = fit
+    def prepare_generation(self):
+        self._speciate()
 
-    def speciate(self):
+    def _speciate(self):
         for s in self.species:
             if len(s.members) > 0:
                 s.representative = copy.deepcopy(random.choice(s.members))
@@ -139,16 +122,3 @@ class SpeciesGeneticAlgorithm:
                     if not ind.is_valid():
                         ind.body[r, c] = old_val
         return next_gen
-
-    def run(self) -> Structure:
-        with multiprocessing.Pool(processes=self.num_workers) as pool:
-            for gen in range(self.generations):
-                self.evaluate_population(pool)
-                self.speciate()
-                parents_species = self.selection_strategy()
-                offspring = self.crossover_strategy(parents_species)
-                self.population = self.mutate_strategy(offspring)
-                
-                print(f"gen {gen+1} best Fit: {self.best_fit} species {len(self.species)} threshold: {self.threshold}")
-        
-        return self.best_robot
