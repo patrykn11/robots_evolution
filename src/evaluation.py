@@ -4,16 +4,17 @@ import numpy as np
 from structure import Structure
 from controller import Controller
 
+#? Maybe this should not be hardcoded here?
 OMEGA = 5 * np.pi
 PHASE_K = -2
 AMPLITUDE = 0.5
 OFFSET = 1.0
 
 
-def evaluate(structure: Structure) -> float:
+def evaluate(structure: Structure, env_type) -> float:
     if not structure.is_valid():
         return 0.0
-    env = gym.make('Walker-v0', body=structure.body)
+    env = gym.make(env_type, body=structure.body)
     env.reset()
     action_space = env.action_space
     if action_space is None or action_space.shape[0] == 0:
