@@ -16,6 +16,7 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         crossover_probability: float = 0.7,
         robot_shape: Tuple[int, int] = (5, 5),
         voxel_types: List[int] = [0, 1, 2, 3, 4],
+        env_type: str = 'Walker-v0',
         pop_size=100, 
         generations=80, 
     ):
@@ -25,6 +26,7 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
             generations=generations, 
             robot_shape=robot_shape,
             voxel_types=voxel_types,
+            env_type=env_type,
         )
         self.target_species = target_species
         self.mutation_rate = mutation_rate

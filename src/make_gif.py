@@ -4,11 +4,11 @@ import evogym.envs
 import numpy as np
 import imageio
 import os
-import sys
 import argparse
 import glob
 from PIL import Image, ImageDraw, ImageFont
 
+#! FYI Imports for pickle
 from controller import Controller
 from structure import Structure 
 
@@ -96,6 +96,9 @@ def create_evolution_gif(experiment_dir, env_name='Walker-v0', steps_per_gen=100
 
 
 def main():
+    """
+    Example usage: python make_gif.py path/to/experiment_dir --fps 30 --steps-per-gen 100 --output-filename evolution_timelapse.gif
+    """
     parser = argparse.ArgumentParser(description="Create evolution GIF from experiment data.")
     
     parser.add_argument("experiment_dir", type=str, help="Path to the experiment directory.")

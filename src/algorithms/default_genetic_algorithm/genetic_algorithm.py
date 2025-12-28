@@ -13,9 +13,9 @@ class GeneticAlgorithm(BaseGeneticAlgorithm):
         crossover_probability: float = 0.8,
         robot_shape: Tuple[int, int] = (5, 5),
         voxel_types: List[int] = [0, 1, 2, 3, 4],
+        env_type: str = 'Walker-v0',
         pop_size=80,
         generations=50,
-
     ):
         super().__init__(
             experiment_name,
@@ -23,6 +23,7 @@ class GeneticAlgorithm(BaseGeneticAlgorithm):
             generations=generations,
             robot_shape=robot_shape,
             voxel_types=voxel_types,
+            env_type=env_type,
         )
         self.mutation_rate = mutation_rate
         self.crossover_probability = crossover_probability

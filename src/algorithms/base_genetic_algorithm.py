@@ -17,6 +17,7 @@ class BaseGeneticAlgorithm:
         generations: int,
         robot_shape: Tuple[int, int],
         voxel_types: List[int],
+        env_type: str = 'Walker-v0',
     ):
         self.experiment_name = experiment_name
         self.save_path = os.path.join("results", self.experiment_name)
@@ -26,6 +27,7 @@ class BaseGeneticAlgorithm:
         self.generations = generations
         self.robot_shape = robot_shape
         self.voxel_types = voxel_types
+        self.env_type = env_type
         
         self.population = [self._create_random_structure() for _ in range(self.pop_size)]
         self.best_robot = None
@@ -37,7 +39,7 @@ class BaseGeneticAlgorithm:
         return Structure(body)
 
     def evaluate_population(self, pool):
-        fitness_scores = pool.map(evaluate, self.population)
+        fitness_scores = pool.map(evaluate, self.population, self.env_type)
         for ind, fit in zip(self.population, fitness_scores):
             ind.fitness = fit
             if fit > self.best_fit:
