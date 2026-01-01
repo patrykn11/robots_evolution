@@ -1,4 +1,5 @@
 import numpy as np
+from functools import partial
 import multiprocessing
 import os
 import pickle
@@ -39,7 +40,8 @@ class BaseGeneticAlgorithm:
         return Structure(body)
 
     def evaluate_population(self, pool):
-        fitness_scores = pool.map(evaluate, self.population, self.env_type)
+        evaluate_with_env = partial(evaluate, env_type=self.env_type)
+        fitness_scores = pool.map(evaluate_with_env, self.population)
         for ind, fit in zip(self.population, fitness_scores):
             ind.fitness = fit
             if fit > self.best_fit:
