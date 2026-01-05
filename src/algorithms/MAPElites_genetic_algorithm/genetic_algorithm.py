@@ -7,6 +7,7 @@ from structure import Structure
 from algorithms.base_genetic_algorithm import BaseGeneticAlgorithm
 from evogym import sample_robot
 from evaluation import evaluate
+import matplotlib.pyplot as plt 
 
 class MAPElitesAlgorithm(BaseGeneticAlgorithm):
     def __init__(
@@ -94,7 +95,8 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
 
     def run(self):
         with multiprocessing.Pool(processes=self.num_workers) as pool:
-            fitness_scores = pool.map(evaluate, self.population, [self.env_type]*len(self.population))
+            inputs = zip(self.population, [self.env_type] * len(self.population))
+            fitness_scores = pool.starmap(evaluate, inputs)
             
             for ind, fit in zip(self.population, fitness_scores):
                 ind.fitness = fit
@@ -115,7 +117,8 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
             offspring = [self.mutate(p) for p in parents]
             
             with multiprocessing.Pool(processes=self.num_workers) as pool:
-                fitness_scores = pool.map(evaluate, offspring, [self.env_type]*len(offspring))
+                inputs = zip(offspring, [self.env_type] * len(offspring))
+                fitness_scores = pool.starmap(evaluate, inputs)
             
             for child, fit in zip(offspring, fitness_scores):
                 child.fitness = fit
@@ -128,6 +131,45 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                 print(f"Iter {current_iter} | Archive Size: {len(self.archive)} | Global Best: {best_glob:.4f}")
                 
         return self.top_10_robots[0] if self.top_10_robots else None
+    
+    def visualize_archive(self, filename="fitness_heatmap.png"):
+        """
+        Tworzy mapę cieplną (heatmap) archiwum.
+        Oś X: Masa (od descriptor index 0 do grid_size)
+        Oś Y: Proporcja Mięśni (od descriptor index 0 do grid_size)
+        Kolor: Najlepszy Fitness Score w danej komórce (agregacja po osi Z)
+        """
+        # Tworzymy pustą macierz 2D wypełnioną wartościami NaN (żeby puste pola były białe)
+        heatmap_data = np.full((self.grid_size, self.grid_size), np.nan)
+
+        # Wypełniamy macierz danymi
+        for (x, y, z), robot in self.archive.items():
+            # Ponieważ mamy 3 wymiary, a rysujemy 2D, musimy zdecydować co zrobić z 3 wymiarem (Z).
+            # Bierzemy MAX fitness dla danego X i Y (najlepszy robot w tej "kolumnie")
+            current_val = heatmap_data[x, y]
+            if np.isnan(current_val) or robot.fitness > current_val:
+                heatmap_data[x, y] = robot.fitness
+
+        # Rysowanie
+        plt.figure(figsize=(10, 8))
+        
+        # Tworzenie heatmapy
+        # origin='lower' sprawia, że (0,0) jest w lewym dolnym rogu, a nie górnym
+        plt.imshow(heatmap_data.T, cmap='viridis', origin='lower', interpolation='nearest')
+        
+        cbar = plt.colorbar()
+        cbar.set_label('Fitness Score')
+        
+        plt.xlabel('Descriptor X: Masa (0 = lekki, Max = ciężki)')
+        plt.ylabel('Descriptor Y: Mięśnie (0 = mało, Max = dużo)')
+        plt.title(f'MAP-Elites Archive Heatmap\nRobots found: {len(self.archive)}')
+        
+        # Zapisz do pliku (bezpieczniej, bo plt.show() blokuje program)
+        plt.savefig(filename)
+        print(f"Heatmapa zapisana jako {filename}")
+        
+        # Pokaż okno (opcjonalne, zakomentuj jeśli puszczasz na serwerze)
+        plt.show()
 
     def _add_to_archive(self, robot: Structure):
         coords = self.get_descriptors(robot)
