@@ -10,11 +10,11 @@ from algorithms.species_genetic_algorithm.species import Species
 if __name__ == "__main__":
     ga = MAPElitesAlgorithm(
         experiment_name="test_map_elites",
-        iterations=300,
+        iterations=200,
         grid_size=20,
         initial_pop_size=50
     )
-    winner = ga.run()
+    winner = ga.run(min_mutations=1)
     ga.visualize_archive()
     
     muscle_indices = np.where((winner.body == 3) | (winner.body == 4))
