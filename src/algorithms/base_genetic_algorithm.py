@@ -9,8 +9,9 @@ from typing import List, Tuple
 from evogym import sample_robot
 from structure import Structure
 from evaluation import evaluate
+from algorithms.saving_mixin import SavingMixin
 
-class BaseGeneticAlgorithm:
+class BaseGeneticAlgorithm(SavingMixin):
     def __init__(
         self,
         experiment_name: str,
@@ -76,14 +77,12 @@ class BaseGeneticAlgorithm:
                 
                 print(f"Gen {gen+1} | Best: {self.best_fit:.4f} | Avg: {avg_fit:.4f}")
                 
-                with open(os.path.join(self.save_path, "history.json"), "w") as f:
-                    json.dump(history, f, indent=4)
-                
-                with open(os.path.join(self.save_path, f"gen_{gen+1:03d}.pkl"), "wb") as f:
-                    pickle.dump(self.best_robot, f)
+                self.save_history(history)
+                self.save_robot(gen + 1, self.best_robot)
 
                 parents = self.selection()
                 offspring = self.crossover(parents)
                 self.population = self.mutate(offspring)
         
+        self.zip_results()
         return self.best_robot

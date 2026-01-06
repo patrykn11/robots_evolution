@@ -6,6 +6,7 @@ import imageio
 import os
 import argparse
 import glob
+import zipfile
 from PIL import Image, ImageDraw, ImageFont
 
 #! FYI Imports for pickle
@@ -29,18 +30,56 @@ def create_evolution_gif(experiment_dir, env_name='Walker-v0', steps_per_gen=100
     """
     Creates a GIF showing the evolution of structures over generations.
     
-    :param experiment_dir: Name of the experiment directory containing generation files.
+    :param experiment_dir: Name of the experiment directory containing generation files or path to a zip file.
     :param env_name: Name of the Evogym environment to use.
     :param steps_per_gen: Number of simulation steps to run per generation.
     :param fps: Frames per second for the output GIF.
     """
-    search_path = os.path.join(experiment_dir, "gen_*.pkl")
-    files = glob.glob(search_path)
+    
+    files = []
+    is_zip = False
+    zip_ref = None
+    
+    if os.path.isfile(experiment_dir) and experiment_dir.lower().endswith('.zip'):
+        is_zip = True
+        try:
+            zip_ref = zipfile.ZipFile(experiment_dir, 'r')
+        except Exception as e:
+            print(f"Error opening zip file: {e}")
+            return
+
+    elif os.path.isdir(experiment_dir):
+        search_path = os.path.join(experiment_dir, "gen_*.pkl")
+        files = glob.glob(search_path)
+        
+        if not files:
+            possible_zip = os.path.join(experiment_dir, "evolution_data.zip")
+            if os.path.isfile(possible_zip):
+                print(f"No .pkl files found, but found zip archive: {possible_zip}")
+                is_zip = True
+                experiment_dir = possible_zip 
+                try:
+                    zip_ref = zipfile.ZipFile(possible_zip, 'r')
+                except Exception as e:
+                    print(f"Error opening zip file: {e}")
+                    return
+    else:
+        print(f"Error: {experiment_dir} is not a valid directory or zip file.")
+        return
+
+    if is_zip and zip_ref:
+        all_files = zip_ref.namelist()
+        files = [f for f in all_files if os.path.basename(f).startswith('gen_') and f.endswith('.pkl')]
 
     files.sort()
     
     if not files:
-        print(f"Files not found in: {search_path}. Run main.py first!")
+        msg = f"Files not found in: {experiment_dir}"
+        if is_zip:
+             msg += " (checked inside zip archive)"
+        print(msg)
+        if is_zip and zip_ref:
+            zip_ref.close()
         return
 
     print(f"Found {len(files)} generations. Starting rendering...")
@@ -49,15 +88,19 @@ def create_evolution_gif(experiment_dir, env_name='Walker-v0', steps_per_gen=100
 
     controller = Controller(omega=5*np.pi, phase_coefficent=-2, amplitude=0.5, offset=1.0)
 
-    for i, file_path in enumerate(files):
+    for i, file_path_or_name in enumerate(files):
         gen_num = i + 1
-        print(f"Processing Generation {gen_num}/{len(files)}: {os.path.basename(file_path)}")
+        print(f"Processing Generation {gen_num}/{len(files)}: {os.path.basename(file_path_or_name)}")
         
         try:
-            with open(file_path, "rb") as f:
-                structure = pickle.load(f)
+            if is_zip:
+                with zip_ref.open(file_path_or_name) as f:
+                    structure = pickle.load(f)
+            else:
+                with open(file_path_or_name, "rb") as f:
+                    structure = pickle.load(f)
         except Exception as e:
-            print(f"Error reading file {file_path}: {e}")
+            print(f"Error reading file {file_path_or_name}: {e}")
             continue
 
         try:
@@ -89,7 +132,13 @@ def create_evolution_gif(experiment_dir, env_name='Walker-v0', steps_per_gen=100
         
         env.close()
 
-    output_path = os.path.join(experiment_dir, output_filename)
+    if is_zip:
+        zip_ref.close()
+        output_dir = os.path.dirname(experiment_dir)
+    else:
+        output_dir = experiment_dir
+
+    output_path = os.path.join(output_dir, output_filename)
     print(f"Saving GIF ({len(frames)} frames)... This may take a while.")
     imageio.mimsave(output_path, frames, fps=fps)
     print(f"Done! Your timelapse is at: {output_path}")
@@ -97,11 +146,11 @@ def create_evolution_gif(experiment_dir, env_name='Walker-v0', steps_per_gen=100
 
 def main():
     """
-    Example usage: python make_gif.py path/to/experiment_dir --fps 30 --steps-per-gen 100 --output-filename evolution_timelapse.gif
+    Example usage: python make_gif.py path/to/experiment_dir_or_zip --fps 30 --steps-per-gen 100 --output-filename evolution_timelapse.gif
     """
-    parser = argparse.ArgumentParser(description="Create evolution GIF from experiment data.")
+    parser = argparse.ArgumentParser(description="Create evolution GIF from experiment data (directory or zip file).")
     
-    parser.add_argument("experiment_dir", type=str, help="Path to the experiment directory.")
+    parser.add_argument("experiment_dir", type=str, help="Path to the experiment directory or zip file.")
     
     parser.add_argument("--fps", type=int, default=30, help="Frames per second for the output GIF (default: 30)")
     parser.add_argument("--steps-per-gen", type=int, default=100, help="Number of simulation steps per generation (default: 100)")

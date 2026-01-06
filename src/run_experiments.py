@@ -1,30 +1,44 @@
 from experiments_runner import ExperimentsRunner
 from algorithms.species_genetic_algorithm.genetic_algorithm import SpeciesGeneticAlgorithm
 from algorithms.default_genetic_algorithm.genetic_algorithm import GeneticAlgorithm
+from algorithms.MAPElites_genetic_algorithm.genetic_algorithm import MAPElitesAlgorithm
 
-def run_batch():
+
+def run_all_algorithms():
+    """
+    Here we define and run basic experiments for different genetic algorithms.
+    """
     runner = ExperimentsRunner()
 
-    # runner.add_experiment(
-    #     algo_class=SpeciesGeneticAlgorithm,
-    #     params={
-    #         "experiment_name": "baseline_species",
-    #         "generations": 5,
-    #         "pop_size": 100,
-    #         "target_species": 6
-    #     }
-    # )
+    runner.add_experiment(
+        algo_class=SpeciesGeneticAlgorithm,
+        params={
+            "experiment_name": "species_experiment",
+            "generations": 50,
+            "pop_size": 50,
+            "target_species": 6
+        }
+    )
 
     runner.add_experiment(
         algo_class=GeneticAlgorithm,
         params={
-            "experiment_name": "baseline_genetic",
+            "experiment_name": "genetic_experiment",
             "generations": 50,
-            "pop_size": 80,
+            "pop_size": 50,
+        }
+    )
+
+    runner.add_experiment(
+        algo_class=MAPElitesAlgorithm,
+        params={
+            "experiment_name": "map_elites_experiment",
+            "generations": 50,
+            "pop_size": 50,
         }
     )
     
     runner.run_all()
 
 if __name__ == "__main__":
-    run_batch()
+    run_all_algorithms()

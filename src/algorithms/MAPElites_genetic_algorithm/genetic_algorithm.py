@@ -16,14 +16,14 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         robot_shape: Tuple[int, int] = (5, 5),
         voxel_types: List[int] = [0, 1, 2, 3, 4], 
         env_type: str = 'Walker-v0',
-        iterations=1000,           
+        generations=1000,           
         grid_size=20,              
-        initial_pop_size=100       
+        pop_size=100       
     ):
         super().__init__(
             experiment_name,
-            pop_size=initial_pop_size,
-            generations=iterations,
+            pop_size=pop_size,
+            generations=generations,
             robot_shape=robot_shape,
             voxel_types=voxel_types,
             env_type=env_type,
@@ -94,6 +94,8 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         return parent 
 
     def run(self):
+        history = {"best_fitness": [], "avg_fitness": [], "archive_size": []}
+        
         with multiprocessing.Pool(processes=self.num_workers) as pool:
             inputs = zip(self.population, [self.env_type] * len(self.population))
             fitness_scores = pool.starmap(evaluate, inputs)
@@ -126,10 +128,19 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
             
             current_iter += 1
             
-            if current_iter % 10 == 0:
-                best_glob = self.top_10_robots[0].fitness if self.top_10_robots else 0
-                print(f"Iter {current_iter} | Archive Size: {len(self.archive)} | Global Best: {best_glob:.4f}")
-                
+            best_glob = self.top_10_robots[0].fitness if self.top_10_robots else 0
+            avg_fit = np.mean([r.fitness for r in self.archive.values()]) if self.archive else 0
+            
+            history["best_fitness"].append(float(best_glob))
+            history["avg_fitness"].append(float(avg_fit))
+            history["archive_size"].append(len(self.archive))
+            
+            print(f"Iter {current_iter} | Archive Size: {len(self.archive)} | Best: {best_glob:.4f} | Avg: {avg_fit:.4f}")
+
+            self.save_history(history)
+            self.save_robot(current_iter, self.top_10_robots[0] if self.top_10_robots else None)
+        
+        self.zip_results()
         return self.top_10_robots[0] if self.top_10_robots else None
     
     def visualize_archive(self, filename="fitness_heatmap.png"):
