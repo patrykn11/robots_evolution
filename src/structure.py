@@ -22,3 +22,16 @@ class Structure:
     
     def get_1D_body(self):
         return self.body.reshape(-1)
+    
+    def render_robot_and_save(self, save_path, env_type='Walker-v0'):
+        import gymnasium as gym
+        import evogym.envs
+        from PIL import Image
+
+        env = gym.make(env_type, body=self.body, render_mode='rgb_array')
+        env.reset()
+        frame = env.render()
+        
+        im = Image.fromarray(frame)
+        im.save(save_path)
+        env.close()
