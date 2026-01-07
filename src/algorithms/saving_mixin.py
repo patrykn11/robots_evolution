@@ -13,12 +13,12 @@ class SavingMixin:
         with open(os.path.join(self.save_path, "history.json"), "w") as f:
             json.dump(history, f, indent=4)
 
-    def save_robot(self, generation, robot):
+    def save_robot(self, generation, robot, file_pattern="gen_{:03d}.pkl"):
         """Saves the robot object to a pickle file."""
         if not hasattr(self, 'save_path') or robot is None:
             return
-
-        with open(os.path.join(self.save_path, f"gen_{generation:03d}.pkl"), "wb") as f:
+        
+        with open(os.path.join(self.save_path, file_pattern.format(generation)), "wb") as f:
             pickle.dump(robot, f)
 
     def zip_results(self):
