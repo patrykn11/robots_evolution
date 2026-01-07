@@ -61,39 +61,73 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
 
         return (x_idx, y_idx, z_idx)
 
-    def mutate(self, parent: Structure) -> Structure:
+    def _random_selection(self, keys: list[Tuple]) -> Structure:
+        random_key = random.choice(keys)
+        return self.archive[random_key]
+
+    def _tournament_selection(self, keys: list[Tuple], tournament_size: int = 5) -> Structure:
+        candidate_keys = random.sample(keys, min(len(keys), tournament_size))
+        best_key = max(candidate_keys,  key = lambda k: self.archive[k].fitness)
+        return self.archive[best_key]
+    
+    def _exponential_selection(self, keys: list[Tuple]) -> Structure:
+        candidtaes = [self.archive[k] for k in keys]
+        fitnesses = np.array([rob.fitness for rob in candidtaes])
+        weights = np.exp(fitnesses- np.max(fitnesses))
+        
+        return random.choices(candidtaes, weights=weights, k=1)[0]
+
+    def crossover(self, parent1: Structure, parent2: Structure) -> Structure:
+        for _ in range(20): 
+            child_body = np.zeros(self.robot_shape, dtype=int)
+            
+            axis = random.choice([0, 1])
+            split_idx = random.randint(1, self.robot_shape[axis] - 1)
+            
+            if axis == 0:
+                child_body[:split_idx, :] = parent1.body[:split_idx, :]
+                child_body[split_idx:, :] = parent2.body[split_idx:, :]
+            else:
+                child_body[:, :split_idx] = parent1.body[:, :split_idx]
+                child_body[:, split_idx:] = parent2.body[:, split_idx:]
+            
+            child = Structure(child_body)
+            if child.is_valid():
+                return child
+        
+        return copy.deepcopy(parent1)
+
+    def mutate(self, parent: Structure, min_mutations: int = 1, bonus_chance: float = 0.2) -> Structure:
         for _ in range(20): 
             new_body = parent.body.copy()
+            mutations_left = min_mutations
             
-            if random.random() < 0.5: 
+            while mutations_left > 0:
                 r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
-                if new_body[r, c] != 0: 
-                    current_type = new_body[r, c]
-                    if current_type == 1:
-                        new_body[r, c] = random.choice([2, 3, 4])
-                    else:
-                        new_body[r, c] = 1
-
-            if random.random() < 0.5: 
-                r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
+                mutation_happened = False
                 
                 if new_body[r, c] != 0: 
                     if random.random() < 0.5:
-                        new_body[r, c] = 0
+                        current = new_body[r, c]
+                        new_body[r, c] = random.choice([2, 3, 4]) if current == 1 else 1
+                    else:
+                        if random.random() < 0.4: new_body[r, c] = 0
+                    mutation_happened = True
                 else:
                     if random.random() < 0.5:
-                        if random.random() < 0.5:
-                            new_body[r, c] = 1 
-                        else:
-                            new_body[r, c] = random.choice([2, 3, 4]) 
+                        new_body[r, c] = 1 if random.random() < 0.5 else random.choice([2, 3, 4])
+                        mutation_happened = True
+                
+                if mutation_happened:
+                    if random.random() > bonus_chance:
+                        mutations_left -= 1
             
             child = Structure(new_body)
             if child.is_valid():
                 return child
-        
         return parent 
 
-    def run(self):
+    def run(self, strategy: str = "tournament", min_mutations: int = 1):
         history = {"best_fitness": [], "avg_fitness": [], "archive_size": []}
         
         with multiprocessing.Pool(processes=self.num_workers) as pool:
@@ -105,19 +139,36 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                 self._add_to_archive(ind)
 
         batch_size = self.num_workers * 4 
-        
         current_iter = 0
+        
         while current_iter < self.generations:
             keys = list(self.archive.keys())
             if not keys: break 
             
-            parents = []
+            offspring = []
             for _ in range(batch_size):
-                random_key = random.choice(keys)
-                parents.append(self.archive[random_key])
-            
-            offspring = [self.mutate(p) for p in parents]
-            
+                parent = None
+                child = None
+                        
+                match strategy:
+                    case "random_search":
+                        parent = self._random_selection(keys)
+                        child = self.mutate(parent, min_mutations, bonus_chance=0.0)
+
+                    case "tournament":
+                        parent = self._tournament_selection(keys, tournament_size=5)
+                        child = self.mutate(parent, min_mutations, bonus_chance=0.1)
+
+                    case "aggressive_bonus":
+                        parent = self._exponential_selection(keys)
+                        child = self.mutate(parent, min_mutations, bonus_chance=0.2)
+
+                    case _:
+                        parent = self._select_random(keys)
+                        child = self.mutate(parent)
+
+                offspring.append(child)
+                        
             with multiprocessing.Pool(processes=self.num_workers) as pool:
                 inputs = zip(offspring, [self.env_type] * len(offspring))
                 fitness_scores = pool.starmap(evaluate, inputs)
