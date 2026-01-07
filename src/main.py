@@ -8,11 +8,15 @@ from algorithms.species_genetic_algorithm.species import Species
 
 
 if __name__ == "__main__":
-    ga = GeneticAlgorithm(
-        experiment_name="default"
+    ga = MAPElitesAlgorithm(
+        experiment_name="test_map_elites",
+        generations=100,
+        grid_size=20,
+        pop_size=50
     )
-    winner = ga.run()
-    ga.visualize_archive()
+    winner = ga.run(selection_strategy='tournament', mutation_strategy=1,
+                    min_mutations = 2, bonus_chance = 0.4)
+    # ga.visualize_archive()
     
     muscle_indices = np.where((winner.body == 3) | (winner.body == 4))
     muscle_x = muscle_indices[1]

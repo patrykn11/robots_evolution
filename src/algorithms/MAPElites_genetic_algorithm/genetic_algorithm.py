@@ -97,7 +97,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         
         return copy.deepcopy(parent1)
 
-    def mutate(self, parent: Structure, min_mutations: int = 1, bonus_chance: float = 0.2) -> Structure:
+    def _mutation_1(self, parent: Structure,  min_mutations: int = 1, bonus_chance: float = 0.2) -> Structure:
         for _ in range(20): 
             new_body = parent.body.copy()
             mutations_left = min_mutations
@@ -127,7 +127,48 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                 return child
         return parent 
 
-    def run(self, strategy: str = "tournament", min_mutations: int = 1):
+    def _mutation_2(self, parent: Structure, starting_chance: float) -> Structure:
+        chance = starting_chance
+        for _ in range(20):
+            new_body = parent.body.copy()
+            while (random.random() < chance):
+                r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
+                current = new_body[r, c]
+                if current == 0: new_body[r, c] = random.choice([2, 3, 4]) if current == 1 else 1
+                else: new_body[r, c] = 0
+                chance /= 2
+            
+            child = Structure(new_body)
+            if child.is_valid():
+                return child
+        return parent
+    
+    def _mutation_3(self, parent: Structure, mutation_chance: float) -> Structure:
+        for _ in range(20):
+            new_body =  parent.body.copy()
+            if random.random() < mutation_chance:
+                r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
+                current = new_body[r, c]
+                if current == 0: new_body[r, c] = random.choice([2, 3, 4]) if current == 1 else 1
+                else: new_body[r, c] = 0
+            
+            child = Structure(new_body)
+            if child.is_valid(): return child
+        return parent        
+
+    def mutate(self, parent: Structure, strategy: int, *args, **kwargs) -> Structure:
+        match (strategy):
+            case 1:
+                mutant = self._mutation_1(parent, *args, **kwargs)
+            case 2:
+                mutant = self._mutation_2(parent, *args, **kwargs)
+            case 3:
+                mutant = self._mutation_3(parent, *args, **kwargs)
+            case _:
+                raise ValueError("Incorrect mutation strategy provided")
+            
+        return mutant
+    def run(self, mutation_strategy:int = 1, selection_strategy: str = "tournament", *args, **kwargs):
         history = {"best_fitness": [], "avg_fitness": [], "archive_size": []}
         
         with multiprocessing.Pool(processes=self.num_workers) as pool:
@@ -150,22 +191,22 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                 parent = None
                 child = None
                         
-                match strategy:
+                match selection_strategy:
                     case "random_search":
                         parent = self._random_selection(keys)
-                        child = self.mutate(parent, min_mutations, bonus_chance=0.0)
+                        child = self.mutate(parent, mutation_strategy, *args,  **kwargs)
 
                     case "tournament":
                         parent = self._tournament_selection(keys, tournament_size=5)
-                        child = self.mutate(parent, min_mutations, bonus_chance=0.1)
+                        child = self.mutate(parent, mutation_strategy, *args, **kwargs)
 
                     case "aggressive_bonus":
                         parent = self._exponential_selection(keys)
-                        child = self.mutate(parent, min_mutations, bonus_chance=0.2)
+                        child = self.mutate(parent, mutation_strategy, *args, **kwargs)
 
                     case _:
                         parent = self._select_random(keys)
-                        child = self.mutate(parent)
+                        child = self.mutate(parent,mutation_strategy, *args, **kwargs)
 
                 offspring.append(child)
                         
