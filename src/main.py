@@ -8,11 +8,8 @@ from algorithms.species_genetic_algorithm.species import Species
 
 
 if __name__ == "__main__":
-    ga = MAPElitesAlgorithm(
-        experiment_name="test_map_elites",
-        iterations=300,
-        grid_size=20,
-        initial_pop_size=50
+    ga = GeneticAlgorithm(
+        experiment_name="default"
     )
     winner = ga.run()
     ga.visualize_archive()
