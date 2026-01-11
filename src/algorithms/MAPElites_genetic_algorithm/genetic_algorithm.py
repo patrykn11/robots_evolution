@@ -32,6 +32,9 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         self.grid_size = grid_size
         self.archive: Dict[Tuple[int, int, int], Structure] = {}
         self.top_10_robots: List[Structure] = []
+        self.top_robot = None
+        self.non_change_score_counter: int = 0
+        self.do_boost: bool = False
 
     def get_descriptors(self, structure: Structure) -> Tuple[int, int, int]:
         body = structure.body
@@ -61,39 +64,142 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
 
         return (x_idx, y_idx, z_idx)
 
-    def mutate(self, parent: Structure) -> Structure:
+    def _random_selection(self, keys: list[Tuple]) -> Structure:
+        random_key = random.choice(keys)
+        return self.archive[random_key]
+
+    def _tournament_selection(self, keys: list[Tuple], tournament_size: int = 5) -> Structure:
+        candidate_keys = random.sample(keys, min(len(keys), tournament_size))
+        best_key = max(candidate_keys,  key = lambda k: self.archive[k].fitness)
+        return self.archive[best_key]
+    
+    def _exponential_selection(self, keys: list[Tuple]) -> Structure:
+        candidtaes = [self.archive[k] for k in keys]
+        fitnesses = np.array([rob.fitness for rob in candidtaes])
+        weights = np.exp(fitnesses- np.max(fitnesses))
+        
+        return random.choices(candidtaes, weights=weights, k=1)[0]
+
+    def _mutation_1(self, parent: Structure, min_mutations: int = 1, bonus_chance: float = 0.2) -> Structure:
         for _ in range(20): 
             new_body = parent.body.copy()
+            mutations_left = min_mutations
             
-            if random.random() < 0.5: 
+            while mutations_left > 0:
                 r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
-                if new_body[r, c] != 0: 
-                    current_type = new_body[r, c]
-                    if current_type == 1:
-                        new_body[r, c] = random.choice([2, 3, 4])
-                    else:
-                        new_body[r, c] = 1
-
-            if random.random() < 0.5: 
-                r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
+                mutation_happened = False
                 
                 if new_body[r, c] != 0: 
                     if random.random() < 0.5:
-                        new_body[r, c] = 0
+                        current = new_body[r, c]
+                        new_body[r, c] = random.choice([2, 3, 4]) if current == 1 else 1
+                    else:
+                        if random.random() < 0.4: new_body[r, c] = 0
+                    mutation_happened = True
                 else:
                     if random.random() < 0.5:
-                        if random.random() < 0.5:
-                            new_body[r, c] = 1 
-                        else:
-                            new_body[r, c] = random.choice([2, 3, 4]) 
+                        new_body[r, c] = 1 if random.random() < 0.5 else random.choice([2, 3, 4])
+                        mutation_happened = True
+                
+                if mutation_happened:
+                    if random.random() > bonus_chance:
+                        mutations_left -= 1
             
             child = Structure(new_body)
             if child.is_valid():
                 return child
-        
         return parent 
+    
+    """Cascade mutation with starting chance"""
+    def _mutation_2(self, parent: Structure, starting_chance: float) -> Structure:
+        chance = starting_chance
+        for _ in range(20):
+            new_body = parent.body.copy()
+            while (random.random() < chance):
+                r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
+                
+                if new_body[r, c] == 0: new_body[r, c] = random.choice([2, 3, 4])
+                else: new_body[r, c] = 0
+                chance /= 2
+            
+            child = Structure(new_body)
+            if child.is_valid():
+                return child
+        return parent
+    
+    """Simple mutation with provided chance"""
+    def _mutation_3(self, parent: Structure, mutation_chance: float) -> Structure:
+        for _ in range(20):
+            new_body =  parent.body.copy()
+            if random.random() < mutation_chance:
+                r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
+                current = new_body[r, c]
+                if current == 0: new_body[r, c] = random.choice([2, 3, 4]) if current == 1 else 1
+                else: new_body[r, c] = 0
+            
+            child = Structure(new_body)
+            if child.is_valid(): return child
+        return parent        
+    
+    """Mutation with boost"""
+    def _mutation_4(self, parent: Structure, boost_mutations: int = 5) -> Structure:
+        for _ in range(20):
+            new_body = parent.body.copy()
+            if not self.do_boost: boost_mutations = 1
+            for _ in range(boost_mutations):
+                r, c = np.random.randint(0, self.robot_shape[0]), np.random.randint(0, self.robot_shape[1])
+                current = new_body[r, c]
+                if current == 0: new_body[r, c] = random.choice([2, 3, 4]) if current == 1 else 1
+                else: new_body[r, c] = 0
+            
+            child = Structure(new_body)
+            if child.is_valid(): return child
+        return parent     
+    
+    def _mutation_5(self, parent: Structure) -> Structure:
+        for _ in range(20):
+            new_body = parent.body.copy()
+            r1 = np.random.randint(0, self.robot_shape[0])
+            r2 = np.random.randint(0, self.robot_shape[0])
+            c1 = np.random.randint(0, self.robot_shape[1])
+            c2 = np.random.randint(0, self.robot_shape[1])
 
-    def run(self):
+            r_start, r_end = sorted((r1, r2))
+            c_start, c_end = sorted((c1, c2))
+
+            if r_start == r_end: r_end += 1
+            if c_start == c_end: c_end += 1
+            
+            r_end = min(r_end, self.robot_shape[0])
+            c_end = min(c_end, self.robot_shape[1])
+
+            subgrid = new_body[r_start:r_end, c_start:c_end]
+            flat_subgrid = subgrid.flatten()
+            np.random.shuffle(flat_subgrid)
+            new_body[r_start:r_end, c_start:c_end] = flat_subgrid.reshape(subgrid.shape)
+            
+            child = Structure(new_body)
+            if child.is_valid(): return child
+            
+        return parent
+              
+    def mutate(self, parent: Structure, strategy: int, *args, **kwargs) -> Structure:
+        match (strategy):
+            case 1:
+                mutant = self._mutation_1(parent, *args, **kwargs)
+            case 2:
+                mutant = self._mutation_2(parent, *args, **kwargs)
+            case 3:
+                mutant = self._mutation_3(parent, *args, **kwargs)
+            case 4:
+                mutant = self._mutation_4(parent, *args, **kwargs)
+            case 5:
+                mutant = self._mutation_5(parent, *args, **kwargs)
+            case _:
+                raise ValueError("Incorrect mutation strategy provided")
+            
+        return mutant
+    def run(self, mutation_strategy: int = 1, selection_strategy: str = "tournament", *args, **kwargs):
         history = {"best_fitness": [], "avg_fitness": [], "archive_size": []}
         
         with multiprocessing.Pool(processes=self.num_workers) as pool:
@@ -105,19 +211,30 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                 self._add_to_archive(ind)
 
         batch_size = self.num_workers * 4 
-        
         current_iter = 0
+        
+        best_score = 0
         while current_iter < self.generations:
             keys = list(self.archive.keys())
             if not keys: break 
             
-            parents = []
+            offspring = []
             for _ in range(batch_size):
-                random_key = random.choice(keys)
-                parents.append(self.archive[random_key])
-            
-            offspring = [self.mutate(p) for p in parents]
-            
+                parent = None
+                child = None
+                        
+                match selection_strategy:
+                    case "random_search":
+                        parent = self._random_selection(keys)
+                    case "tournament":
+                        parent = self._tournament_selection(keys, tournament_size=5)
+                    case "aggressive_bonus":
+                        parent = self._exponential_selection(keys)
+                    case _:
+                        parent = self._random_selection(keys)
+                child = self.mutate(parent, mutation_strategy, *args,  **kwargs)
+                offspring.append(child)
+                        
             with multiprocessing.Pool(processes=self.num_workers) as pool:
                 inputs = zip(offspring, [self.env_type] * len(offspring))
                 fitness_scores = pool.starmap(evaluate, inputs)
@@ -129,13 +246,23 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
             current_iter += 1
             
             best_glob = self.top_10_robots[0].fitness if self.top_10_robots else 0
+            if best_glob > best_score: 
+                best_score = best_glob
+                self.non_change_score_counter = 0
+                self.do_boost = False
+            elif round(best_glob, 2) == round(best_score, 2): 
+                self.non_change_score_counter += 1
+            
+            if self.non_change_score_counter >= 2: self.do_boost =  True
+            
             avg_fit = np.mean([r.fitness for r in self.archive.values()]) if self.archive else 0
             
             history["best_fitness"].append(float(best_glob))
             history["avg_fitness"].append(float(avg_fit))
             history["archive_size"].append(len(self.archive))
             
-            print(f"Iter {current_iter} | Archive Size: {len(self.archive)} | Best: {best_glob:.4f} | Avg: {avg_fit:.4f}")
+            print(f"Iter {current_iter} | Archive Size: {len(self.archive)} | Best: {best_glob:.4f} | Avg: {avg_fit:.4f}" +
+                  f'Boost: {self.do_boost}')
 
             self.save_history(history)
             self.save_robot(current_iter, self.top_10_robots[0] if self.top_10_robots else None)
