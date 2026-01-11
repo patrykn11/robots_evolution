@@ -9,6 +9,9 @@ from evogym import sample_robot
 from evaluation import evaluate
 import matplotlib.pyplot as plt 
 import seaborn as sns
+import os 
+import zipfile
+import json
 
 class MAPElitesAlgorithm(BaseGeneticAlgorithm):
     def __init__(
@@ -282,11 +285,33 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
             history["avg_fitness"].append(float(avg_fit))
             history["archive_size"].append(len(self.archive))
             
-            print(f"Iter {current_iter} | Archive Size: {len(self.archive)} | Best: {best_glob:.4f} | Avg: {avg_fit:.4f}" +
+            print(f"Iter {current_iter} | Archive Size: {len(self.archive)} | Best: {best_glob:.4f} | Avg: {avg_fit:.4f} " +
                   f'Boost: {self.do_boost}')
 
             self.save_history(history)
             self.save_robot(current_iter, self.top_10_robots[0] if self.top_10_robots else None)
+        
+        experiment_dir = os.path.join("results", self.experiment_name)
+        history_dir = os.path.join(experiment_dir, "history_snapshots")
+        
+        json_path = os.path.join(experiment_dir, "history.json")
+        serializable_history = {
+            k: [float(v) for v in vals] if isinstance(vals, list) else vals
+            for k, vals in history.items()
+        }
+        with open(json_path, "w") as f:
+            json.dump(serializable_history, f, indent=4)
+
+        # 2. Zapisz evolution_data.zip
+        zip_path = os.path.join(experiment_dir, "evolution_data.zip")
+        if os.path.exists(history_dir):
+            with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+                for root, dirs, files in os.walk(history_dir):
+                    for file in files:
+                        if file.endswith(".pkl"):
+                            file_path = os.path.join(root, file)
+                            zipf.write(file_path, arcname=file)
+            print(f"Spakowano roboty do: {zip_path}")
         
         self.zip_results()
         return self.top_10_robots[0] if self.top_10_robots else None
@@ -345,7 +370,6 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
 
         plt.tight_layout()
         plt.savefig(filename)
-        print(f"Heatmapa (Seaborn) zapisana jako {filename}")
         plt.close() 
 
     def _add_to_archive(self, robot: Structure):
