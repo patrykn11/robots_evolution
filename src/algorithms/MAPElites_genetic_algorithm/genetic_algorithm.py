@@ -219,10 +219,10 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                 raise ValueError("Incorrect mutation strategy provided")
             
         return mutant
-    def run(self, mutation_strategy: int = 1, selection_strategy: str = "tournament", *args, **kwargs):
+    def run(self, mutation_strategy: int = 1, selection_strategy: str = "tournament", n_warm_up: int = 1000,  *args, **kwargs):
         history = {"best_fitness": [], "avg_fitness": [], "archive_size": []}
         
-        self.warm_up(n_samples=10000)
+        self.warm_up(n_warm_up)
         with multiprocessing.Pool(processes=self.num_workers) as pool:
             inputs = zip(self.population, [self.env_type] * len(self.population))
             fitness_scores = pool.starmap(evaluate, inputs)
@@ -311,49 +311,32 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         plt.title(f'MAP-Elites Archive Heatmap\nRobots found: {len(self.archive)}')
 
         plt.savefig(filename)
-        print(f"Heatmapa zapisana jako {filename}")
         
         plt.show()
     
     def visualize_max_projection(self, filename="max_projection_heatmap.png", title_suffix=""):
-        """
-        Tworzy heatmapę rzutującą grid 3D na 2D (bierze MAX fitness dla danego X, Y niezależnie od Z).
-        Używa biblioteki Seaborn do wyświetlenia wartości liczbowych na polach.
-        """
-        # 1. Przygotuj macierz 2D wypełnioną NaN
         projection_map = np.full((self.grid_size, self.grid_size), np.nan)
 
-        # 2. Rzutowanie (Projection): Przejdź przez archiwum i znajdź najlepszy fitness dla każdego (x, y)
-        # Ignorujemy 'z', szukając najlepszego osobnika w całym pionie dla danej pary cech (masa, mięśnie)
         for (x, y, z), robot in self.archive.items():
-            current_val = projection_map[y, x] # Uwaga na konwencję [wiersz, kolumna] -> [y, x]
+            current_val = projection_map[y, x] 
             
-            # Jeśli pole jest puste (NaN) lub znaleźliśmy lepszego robota w tym (x, y) na innym 'z'
             if np.isnan(current_val) or robot.fitness > current_val:
                 projection_map[y, x] = robot.fitness
 
-        # 3. Konfiguracja wykresu Seaborn
         plt.figure(figsize=(12, 10))
-        
-        # Maska dla pustych pól (żeby były białe/przezroczyste, a nie "zero")
         mask = np.isnan(projection_map)
         
-        # Rysowanie heatmapy
         ax = sns.heatmap(
             projection_map, 
-            mask=mask,               # Ukryj puste pola
-            annot=True,              # Pokaż liczby na polach
-            fmt=".1f",               # Formatowanie liczb (jedno miejsce po przecinku)
-            cmap="viridis",          # Paleta kolorów (czytelna dla oka)
-            linewidths=.5,           # Linie siatki
+            mask=mask,               
+            annot=True,             
+            fmt=".1f",
+            cmap="viridis",          
+            linewidths=.5,           
             cbar_kws={'label': 'Max Fitness Score'},
-            square=True              # Kwadratowe pola
+            square=True              
         )
 
-        # 4. Opisy osi (zgodnie z Twoim get_descriptors)
-        # Oś X w macierzy to kolumny (x_idx - Masa), Oś Y to wiersze (y_idx - Mięśnie)
-        # W matplotlib/seaborn trzeba uważać, bo imshow/heatmap często rysuje od góry (y=0 u góry).
-        # Tutaj ustawiamy 'invert_yaxis' żeby 0 było na dole, jak na wykresie kartezjańskim.
         ax.invert_yaxis()
         
         plt.xlabel('Descriptor X: Masa (Index)')
