@@ -8,6 +8,7 @@ from algorithms.base_genetic_algorithm import BaseGeneticAlgorithm
 from evogym import sample_robot
 from evaluation import evaluate
 import matplotlib.pyplot as plt 
+import seaborn as sns
 
 class MAPElitesAlgorithm(BaseGeneticAlgorithm):
     def __init__(
@@ -79,7 +80,26 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         weights = np.exp(fitnesses- np.max(fitnesses))
         
         return random.choices(candidtaes, weights=weights, k=1)[0]
-
+    
+    def warm_up(self, n_samples=1000):
+        random_population = []
+        
+        print("Warming up...")
+        for _ in range(n_samples):
+            body, _ = sample_robot((self.robot_shape[0], self.robot_shape[1]))
+            structure = Structure(body)
+            if structure.is_valid():
+                random_population.append(structure)
+        
+        with multiprocessing.Pool(processes=self.num_workers) as pool:
+            inputs = zip(random_population, [self.env_type] * len(random_population))
+            fitness_scores = pool.starmap(evaluate, inputs)
+            
+        for ind, fit in zip(random_population, fitness_scores):
+            ind.fitness = fit
+            self._add_to_archive(ind)
+        print("Warming up ended:)")
+            
     def _mutation_1(self, parent: Structure, min_mutations: int = 1, bonus_chance: float = 0.2) -> Structure:
         for _ in range(20): 
             new_body = parent.body.copy()
@@ -202,6 +222,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
     def run(self, mutation_strategy: int = 1, selection_strategy: str = "tournament", *args, **kwargs):
         history = {"best_fitness": [], "avg_fitness": [], "archive_size": []}
         
+        self.warm_up(n_samples=10000)
         with multiprocessing.Pool(processes=self.num_workers) as pool:
             inputs = zip(self.population, [self.env_type] * len(self.population))
             fitness_scores = pool.starmap(evaluate, inputs)
@@ -293,6 +314,56 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         print(f"Heatmapa zapisana jako {filename}")
         
         plt.show()
+    
+    def visualize_max_projection(self, filename="max_projection_heatmap.png", title_suffix=""):
+        """
+        Tworzy heatmapę rzutującą grid 3D na 2D (bierze MAX fitness dla danego X, Y niezależnie od Z).
+        Używa biblioteki Seaborn do wyświetlenia wartości liczbowych na polach.
+        """
+        # 1. Przygotuj macierz 2D wypełnioną NaN
+        projection_map = np.full((self.grid_size, self.grid_size), np.nan)
+
+        # 2. Rzutowanie (Projection): Przejdź przez archiwum i znajdź najlepszy fitness dla każdego (x, y)
+        # Ignorujemy 'z', szukając najlepszego osobnika w całym pionie dla danej pary cech (masa, mięśnie)
+        for (x, y, z), robot in self.archive.items():
+            current_val = projection_map[y, x] # Uwaga na konwencję [wiersz, kolumna] -> [y, x]
+            
+            # Jeśli pole jest puste (NaN) lub znaleźliśmy lepszego robota w tym (x, y) na innym 'z'
+            if np.isnan(current_val) or robot.fitness > current_val:
+                projection_map[y, x] = robot.fitness
+
+        # 3. Konfiguracja wykresu Seaborn
+        plt.figure(figsize=(12, 10))
+        
+        # Maska dla pustych pól (żeby były białe/przezroczyste, a nie "zero")
+        mask = np.isnan(projection_map)
+        
+        # Rysowanie heatmapy
+        ax = sns.heatmap(
+            projection_map, 
+            mask=mask,               # Ukryj puste pola
+            annot=True,              # Pokaż liczby na polach
+            fmt=".1f",               # Formatowanie liczb (jedno miejsce po przecinku)
+            cmap="viridis",          # Paleta kolorów (czytelna dla oka)
+            linewidths=.5,           # Linie siatki
+            cbar_kws={'label': 'Max Fitness Score'},
+            square=True              # Kwadratowe pola
+        )
+
+        # 4. Opisy osi (zgodnie z Twoim get_descriptors)
+        # Oś X w macierzy to kolumny (x_idx - Masa), Oś Y to wiersze (y_idx - Mięśnie)
+        # W matplotlib/seaborn trzeba uważać, bo imshow/heatmap często rysuje od góry (y=0 u góry).
+        # Tutaj ustawiamy 'invert_yaxis' żeby 0 było na dole, jak na wykresie kartezjańskim.
+        ax.invert_yaxis()
+        
+        plt.xlabel('Descriptor X: Masa (Index)')
+        plt.ylabel('Descriptor Y: Mięśnie (Index)')
+        plt.title(f'MAP-Elites Max-Projection (2D)\nArchives Size: {len(self.archive)} {title_suffix}')
+
+        plt.tight_layout()
+        plt.savefig(filename)
+        print(f"Heatmapa (Seaborn) zapisana jako {filename}")
+        plt.close() 
 
     def _add_to_archive(self, robot: Structure):
         coords = self.get_descriptors(robot)

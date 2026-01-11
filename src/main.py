@@ -10,12 +10,12 @@ from algorithms.species_genetic_algorithm.species import Species
 if __name__ == "__main__":
     ga = MAPElitesAlgorithm(
         experiment_name="test_map_elites",
-        generations=500,
+        generations=300,
         grid_size=20,
         pop_size=50
     )
-    winner = ga.run(selection_strategy='aggressive_bonus', mutation_strategy=5)
-    # ga.visualize_archive()
+    winner = ga.run(selection_strategy='tournament', mutation_strategy=1)
+    ga.visualize_max_projection()
     
     muscle_indices = np.where((winner.body == 3) | (winner.body == 4))
     muscle_x = muscle_indices[1]
