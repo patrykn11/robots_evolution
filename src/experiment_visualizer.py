@@ -50,14 +50,27 @@ class ExperimentVisualizer:
         Plots fitness curves for all experiments loaded.
         """
         print("Plotting fitness curves...")
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(14, 8))
         plot_name = "Fitness Curves-" + "-".join(self.history.keys())
         plt.title(plot_name)
+
+        min_gens = float('inf')
+        for history in self.history.values():
+            gens = len(history.get("best_fitness", []))
+            if gens < min_gens:
+                min_gens = gens
+        
+        if min_gens == float('inf') or min_gens == 0:
+            print("No data to plot or empty history.")
+            plt.close()
+            return
+
+        print(f"Aligning all experiments to {min_gens} generations.")
         
         for exp_name, history in self.history.items():
-            best_fitness = history.get("best_fitness", [])
-            avg_fitness = history.get("avg_fitness", [])
-            generations = range(1, len(best_fitness) + 1)
+            best_fitness = history.get("best_fitness", [])[:min_gens]
+            avg_fitness = history.get("avg_fitness", [])[:min_gens]
+            generations = range(1, min_gens + 1)
             
             plt.plot(generations, best_fitness, label=f'{exp_name} - Best Fitness')
             plt.plot(generations, avg_fitness, label=f'{exp_name} - Average Fitness', linestyle='--')
@@ -113,7 +126,8 @@ class ExperimentVisualizer:
             )
         print("GIF generation completed.")
 
-    def generate_best_robot_video(self, experiment_path: str, output_filename: str = "best_robot.gif", duration_steps: int = 500, fps: int = 30):
+    def generate_best_robot_video(self, experiment_path: str, output_filename: str = "best_robot.gif",
+                                  duration_steps: int = 500, fps: int = 30):
         """
         Generates a video of the best (last) robot from an experiment.
         
@@ -191,11 +205,12 @@ class ExperimentVisualizer:
     ):
         """
         Main method to visualize experiment results.
-        
+
         :param experiment_data_path: Path or list of paths to experiment directories.
         :param plot_fitness_curves: Whether to plot fitness curves.
         :param generate_robot_images: Whether to generate robot images.
         :param generate_full_gif: Whether to generate full evolution GIF.
+        :param generate_full_video: generates full video of the best robot
         :param image_every_n_generations: Interval of generations to save robot images.
         :param env_type: Environment type for rendering robots.
         """
@@ -227,25 +242,36 @@ class ExperimentVisualizer:
                     fps=30
                 )
 
+
 if __name__ == "__main__":
     visualizer = ExperimentVisualizer()
     
-    # visualizer.visualize(
-    #     experiment_data_path=["results/genetic_experiment", "results/species_experiment"],
-    #     plot_fitness_curves=True,
-    #     generate_robot_images=True,
-    #     generate_full_gif=False,
-    #     env_type='Walker-v0'
-    # )
-    # visualizer._load_data()
-    # visualizer.generate_best_robot_video(
-    #     experiment_path="results/species_experiment",
-    #     output_filename="best_robot_video.gif",
-    #     duration_steps=500,
-    #     fps=30
-    # )
     visualizer.visualize(
-        experiment_data_path="results/genetic_experiment",
+        experiment_data_path=["results/genetic_experiment", "results/species_experiment",
+                              "results/map_elites_experiment"],
+        plot_fitness_curves=True,
+        # generate_robot_images=True,
+        # generate_full_gif=True,
+        # generate_full_video=True,
+        # env_type='Walker-v0'
+    )
+
+    # visualizer.visualize(
+    #     experiment_data_path=["results/genetic_experiment"],
+    #     plot_fitness_curves=True,
+    #     generate_full_video=True,
+    # )
+
+    # visualizer.visualize(
+    #     experiment_data_path=["results/species_experiment"],
+    #     plot_fitness_curves=True,
+    #     generate_full_video=True,
+    # )
+
+    visualizer.visualize(
+        experiment_data_path=["results/map_elites_experiment"],
+        plot_fitness_curves=True,
+        generate_robot_images=True,
+        generate_full_gif=True,
         generate_full_video=True,
-        env_type='Walker-v0'
     )

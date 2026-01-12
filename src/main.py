@@ -6,16 +6,19 @@ from controller import Controller
 from experiment_visualizer import ExperimentVisualizer 
 
 if __name__ == "__main__":
-    experiment_name = "test_map_elites"
+    experiment_name = "map_elites_experiment"
 
     ga = MAPElitesAlgorithm(
         experiment_name=experiment_name,
-        generations=20,   
+        generations=100,   
         grid_size=20,
         pop_size=50
     )
 
-    winner = ga.run(selection_strategy='tournament', mutation_strategy=1, n_warm_up=200) 
+    winner = ga.run(selection_strategy='tournament', mutation_strategy=1, n_warm_up=1500) 
+    
+    ga.visualize_advanced()
+    ga.visualize_showcase(num_samples=6)
 
     visualizer = ExperimentVisualizer()
     exp_path = os.path.join("results", experiment_name)

@@ -18,6 +18,7 @@ import zipfile
 import json
 import random
 
+
 class MAPElitesAlgorithm(BaseGeneticAlgorithm):
     def __init__(
         self,
@@ -352,19 +353,18 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         return parent
               
     def mutate(self, parent: Structure, strategy: int, *args, **kwargs) -> Structure:
-        match (strategy):
-            case 1:
-                mutant = self._mutation_1(parent, *args, **kwargs)
-            case 2:
-                mutant = self._mutation_2(parent, *args, **kwargs)
-            case 3:
-                mutant = self._mutation_3(parent, *args, **kwargs)
-            case 4:
-                mutant = self._mutation_4(parent, *args, **kwargs)
-            case 5:
-                mutant = self._mutation_5(parent, *args, **kwargs)
-            case _:
-                raise ValueError("Incorrect mutation strategy provided")
+        if strategy == 1:
+            mutant = self._mutation_1(parent, *args, **kwargs)
+        elif strategy == 2:
+            mutant = self._mutation_2(parent, *args, **kwargs)
+        elif strategy == 3:
+            mutant = self._mutation_3(parent, *args, **kwargs)
+        elif strategy == 4:
+            mutant = self._mutation_4(parent, *args, **kwargs)
+        elif strategy == 5:
+            mutant = self._mutation_5(parent, *args, **kwargs)
+        else:
+            raise ValueError("Incorrect mutation strategy provided")
             
         return mutant
     def run(self, mutation_strategy: int = 1, selection_strategy: str = "tournament", n_warm_up: int = 1000,  *args, **kwargs):
@@ -392,15 +392,14 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                 parent = None
                 child = None
                         
-                match selection_strategy:
-                    case "random_search":
-                        parent = self._random_selection(keys)
-                    case "tournament":
-                        parent = self._tournament_selection(keys, tournament_size=5)
-                    case "aggressive_bonus":
-                        parent = self._exponential_selection(keys)
-                    case _:
-                        parent = self._random_selection(keys)
+                if selection_strategy == "random_search":
+                    parent = self._random_selection(keys)
+                elif selection_strategy == "tournament":
+                    parent = self._tournament_selection(keys, tournament_size=5)
+                elif selection_strategy == "aggressive_bonus":
+                    parent = self._exponential_selection(keys)
+                else:
+                    parent = self._random_selection(keys)
                 child = self.mutate(parent, mutation_strategy, *args,  **kwargs)
                 offspring.append(child)
                         
