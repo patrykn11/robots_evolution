@@ -46,7 +46,6 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         self.do_boost: bool = False
         
         
-        
     def _get_robot_thumbnail(self, body_matrix):
         rows, cols = body_matrix.shape
         img = np.ones((rows, cols, 3)) 
