@@ -245,7 +245,7 @@ if __name__ == "__main__":
     #     fps=30
     # )
     visualizer.visualize(
-        experiment_data_path="results/species_experiment",
+        experiment_data_path="results/genetic_experiment",
         generate_full_video=True,
         env_type='Walker-v0'
     )
