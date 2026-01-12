@@ -8,10 +8,15 @@ from algorithms.base_genetic_algorithm import BaseGeneticAlgorithm
 from evogym import sample_robot
 from evaluation import evaluate
 import matplotlib.pyplot as plt 
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.patches as patches
+import matplotlib.cm as cm
+import matplotlib.patches as mpatches
 import seaborn as sns
 import os 
 import zipfile
 import json
+import random
 
 class MAPElitesAlgorithm(BaseGeneticAlgorithm):
     def __init__(
@@ -39,7 +44,148 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         self.top_robot = None
         self.non_change_score_counter: int = 0
         self.do_boost: bool = False
+        
+        
+        
+    def _get_robot_thumbnail(self, body_matrix):
+        rows, cols = body_matrix.shape
+        img = np.ones((rows, cols, 3)) 
+        
+        colors = {
+            0: [1.0, 1.0, 1.0], 
+            1: [0.0, 0.0, 0.0],  
+            2: [0.5, 0.5, 0.5],  
+            3: [1.0, 0.6, 0.0],  
+            4: [0.0, 0.8, 1.0]   
+        }
+        
+        for r in range(rows):
+            for c in range(cols):
+                val = body_matrix[r, c]
+                if val in colors:
+                    img[r, c] = colors[val]
+                    
+        return img
+    
+    def visualize_showcase(self, filename="showcase_map_PERCENT.png", num_samples=8):
+        heatmap_data = np.full((self.grid_size, self.grid_size), np.nan)
+        for (x, y, z), robot in self.archive.items():
+            current_val = heatmap_data[y, x] 
+            if np.isnan(current_val) or robot.fitness > current_val:
+                heatmap_data[y, x] = robot.fitness
+        
+        if np.all(np.isnan(heatmap_data)):
+            print("Archiwum puste.")
+            return
 
+        fig, ax = plt.subplots(figsize=(20, 20))
+        
+        ax.add_patch(patches.Rectangle((-0.5, -0.5), self.grid_size, self.grid_size, 
+                                     facecolor='#e0e0e0', zorder=0))
+        
+        for i in range(self.grid_size + 1):
+            ax.axhline(i - 0.5, color='white', lw=2, zorder=1)
+            ax.axvline(i - 0.5, color='white', lw=2, zorder=1)
+
+        im = ax.imshow(heatmap_data, cmap='jet', origin='lower', interpolation='nearest', 
+                      aspect='equal', extent=[-0.5, self.grid_size-0.5, -0.5, self.grid_size-0.5], zorder=2)
+        
+        cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+        cbar.set_label('Fitness Score', fontsize=20, weight='bold')
+        cbar.ax.tick_params(labelsize=16)
+        
+        ax.set_title(f'MAP-Elites Archive Showcase\n(Diversity: {len(self.archive)} solutions)', 
+                     fontsize=26, pad=30, weight='bold')
+        
+        ax.axis('off')
+
+        for p in range(0, 101, 10):
+            t = (p / 100.0) * self.grid_size - 0.5 
+            coord = (p / 100.0) * self.grid_size - 0.5
+
+            ax.text(coord, -1.8, f"{p}%", ha='center', va='top', fontsize=16, weight='bold')
+            
+            ax.text(-1.8, coord, f"{p}%", ha='right', va='center', fontsize=16, weight='bold')
+
+        ax.text(self.grid_size / 2.0 - 0.5, -4.5, "Descriptor X: Masa (Lekki -> Ciężki)", 
+                ha='center', va='top', fontsize=24, weight='bold')
+        
+        ax.text(-4.5, self.grid_size / 2.0 - 0.5, "Descriptor Y: Mięśnie (Mało -> Dużo)", 
+                ha='right', va='center', rotation=90, fontsize=24, weight='bold')
+
+        rect = patches.Rectangle((-0.5, -0.5), self.grid_size, self.grid_size, 
+                                 linewidth=5, edgecolor='black', facecolor='none', zorder=10)
+        ax.add_patch(rect)
+
+        all_robots = list(self.archive.items())
+        all_robots.sort(key=lambda item: item[1].fitness, reverse=True)
+        
+        selected_robots = []
+        occupied_spots = []
+        
+        for coords, robot in all_robots:
+            if len(selected_robots) >= num_samples: break     
+            cx, cy, cz = coords
+            
+            is_far_enough = True
+            for (ox, oy, _) in occupied_spots:
+                dist = np.sqrt((cx - ox)**2 + (cy - oy)**2)
+                if dist < self.grid_size * 0.20: 
+                    is_far_enough = False
+                    break
+            
+            if is_far_enough:
+                selected_robots.append({'coords': coords, 'robot': robot})
+                occupied_spots.append(coords)
+
+        center_x, center_y = (self.grid_size - 1) / 2.0, (self.grid_size - 1) / 2.0
+        for item in selected_robots:
+            gx, gy, _ = item['coords']
+            item['angle'] = np.arctan2(gy - center_y, gx - center_x)
+
+        selected_robots.sort(key=lambda x: x['angle'])
+
+        min_angle_diff = 2 * np.pi / (num_samples + 1)
+        for i in range(len(selected_robots) - 1):
+            curr, nxt = selected_robots[i], selected_robots[i+1]
+            diff = nxt['angle'] - curr['angle']
+            if diff < min_angle_diff:
+                nxt['angle'] += (min_angle_diff - diff) * 0.8
+
+        display_radius = (self.grid_size / 2.0) * 1.6 
+
+        for item in selected_robots:
+            robot = item['robot']
+            gx, gy, _ = item['coords']
+            angle = item['angle']
+            
+            img_arr = self._get_robot_thumbnail(robot.body)
+            
+            imagebox = OffsetImage(img_arr, zoom=22.0, cmap='gray', interpolation='nearest') 
+            imagebox.image.axes = ax
+
+            box_x = center_x + display_radius * np.cos(angle)
+            box_y = center_y + display_radius * np.sin(angle)
+
+            ab = AnnotationBbox(
+                imagebox,
+                (gx, gy),
+                xybox=(box_x, box_y),
+                xycoords='data',
+                boxcoords='data',
+                pad=0.3,
+                arrowprops=dict(arrowstyle="->", color="black", lw=2.5, connectionstyle="arc3,rad=0.2"),
+                bboxprops=dict(edgecolor='black', linewidth=3, facecolor='white', alpha=1.0)
+            )
+            ax.add_artist(ab)
+
+        margin = 12 
+        ax.set_xlim(-margin, self.grid_size + margin - 1)
+        ax.set_ylim(-margin, self.grid_size + margin - 1)
+
+        plt.savefig(filename, bbox_inches='tight')
+        plt.close()
+        
     def get_descriptors(self, structure: Structure) -> Tuple[int, int, int]:
         body = structure.body
         
@@ -302,7 +448,6 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         with open(json_path, "w") as f:
             json.dump(serializable_history, f, indent=4)
 
-        # 2. Zapisz evolution_data.zip
         zip_path = os.path.join(experiment_dir, "evolution_data.zip")
         if os.path.exists(history_dir):
             with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
@@ -311,7 +456,6 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                         if file.endswith(".pkl"):
                             file_path = os.path.join(root, file)
                             zipf.write(file_path, arcname=file)
-            print(f"Spakowano roboty do: {zip_path}")
         
         self.zip_results()
         return self.top_10_robots[0] if self.top_10_robots else None
@@ -338,6 +482,53 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         plt.savefig(filename)
         
         plt.show()
+    
+    def visualize_advanced(self, filename="heatmap_advanced.png", slices=4):
+        fig, axes = plt.subplots(2, 2, figsize=(18, 16))
+        axes = axes.flatten()
+        z_step = self.grid_size // slices
+        
+        all_fitnesses = [r.fitness for r in self.archive.values()]
+        if not all_fitnesses:
+            return
+        vmin, vmax = min(all_fitnesses), max(all_fitnesses)
+
+        for i in range(slices):
+            ax = axes[i]
+            z_start = i * z_step
+            z_end = (i + 1) * z_step
+            
+            ax.set_title(f"Z-Slice {i+1}: Aspect Ratio (Index {z_start}-{z_end-1})")
+            slice_data = np.full((self.grid_size, self.grid_size), np.nan)
+            robots_in_slice = []
+            for (x, y, z), robot in self.archive.items():
+                if z_start <= z < z_end:
+                    slice_data[y, x] = robot.fitness
+                    robots_in_slice.append(((x, y), robot))
+
+            im = ax.imshow(slice_data, cmap='viridis', origin='lower', vmin=vmin, vmax=vmax, aspect='auto')
+            
+            ax.set_xlabel('X: Masa (Lekki -> Ciężki)')
+            ax.set_ylabel('Y: Mięśnie (Mało -> Dużo)')
+            
+            for (gx, gy), robot in robots_in_slice:
+                img_arr = self._get_robot_thumbnail(robot.body)
+                imagebox = OffsetImage(img_arr, zoom=0.6, cmap='gray') 
+                imagebox.image.axes = ax
+                
+                ab = AnnotationBbox(
+                    imagebox, 
+                    (gx, gy),
+                    frameon=False,
+                    pad=0
+                )
+                ax.add_artist(ab)
+
+        fig.colorbar(im, ax=axes.ravel().tolist(), label='Fitness')
+        plt.suptitle(f'MAP-Elites 3D Archive Breakdown\nTotal Robots: {len(self.archive)}', fontsize=16)
+        
+        plt.savefig(filename)
+        plt.close()
     
     def visualize_max_projection(self, filename="max_projection_heatmap.png", title_suffix=""):
         projection_map = np.full((self.grid_size, self.grid_size), np.nan)

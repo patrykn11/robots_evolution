@@ -10,20 +10,20 @@ if __name__ == "__main__":
 
     ga = MAPElitesAlgorithm(
         experiment_name=experiment_name,
-        generations=30,   
+        generations=20,   
         grid_size=20,
         pop_size=50
     )
 
-    winner = ga.run(selection_strategy='tournament', mutation_strategy=1, n_warm_up=100) 
+    winner = ga.run(selection_strategy='tournament', mutation_strategy=1, n_warm_up=200) 
 
     visualizer = ExperimentVisualizer()
     exp_path = os.path.join("results", experiment_name)
     
     visualizer.visualize(
         experiment_data_path=exp_path,
-        plot_fitness_curves=True,
-        generate_robot_images=True,
+        plot_fitness_curves=False,
+        generate_robot_images=False,
         generate_full_gif=True,    
         generate_full_video=True,  
         image_every_n_generations=2, 
