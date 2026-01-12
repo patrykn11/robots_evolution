@@ -164,33 +164,34 @@ class ExperimentVisualizer:
         
         controller = Controller(omega=5*np.pi, phase_coefficent=-2, amplitude=0.5, offset=1.0)
         
-        frames = []
-        print(f"Recording {duration_steps} steps...")
-        
-        for step in range(duration_steps):
-            t = step * 0.019
-            action = controller.action_signal(t, muscle_x)
-            
-            res = env.step(action)
-            done = res[2] if len(res) == 4 else (res[2] or res[3])
-            
-            frame = env.render()
-            frames.append(frame)
-            
-            if step % 50 == 0:
-                print(f"  Progress: {step}/{duration_steps} steps")
-            
-            if done:
-                print(f"Robot reached terminal state at step {step}")
-                for _ in range(duration_steps - step - 1):
-                    frames.append(frame)
-                break
-        
-        env.close()
-        
         output_path = os.path.join(experiment_path, output_filename)
-        print(f"Saving video ({len(frames)} frames) to {output_path}...")
-        imageio.mimsave(output_path, frames, fps=fps)
+        print(f"Recording {duration_steps} steps to {output_path}...")
+
+        try:
+            with imageio.get_writer(output_path, mode='I', fps=fps) as writer:
+                for step in range(duration_steps):
+                    t = step * 0.019
+                    action = controller.action_signal(t, muscle_x)
+                    
+                    res = env.step(action)
+                    done = res[2] if len(res) == 4 else (res[2] or res[3])
+                    
+                    frame = env.render()
+                    writer.append_data(frame)
+                    
+                    if step % 50 == 0:
+                        print(f"  Progress: {step}/{duration_steps} steps")
+                    
+                    if done:
+                        print(f"Robot reached terminal state at step {step}")
+                        for _ in range(duration_steps - step - 1):
+                            writer.append_data(frame)
+                        break
+        except Exception as e:
+            print(f"Error generating video: {e}")
+        finally:
+            env.close()
+        
         print(f"Done! Best robot video saved to: {output_path}")
 
     def visualize(
@@ -270,6 +271,14 @@ if __name__ == "__main__":
 
     visualizer.visualize(
         experiment_data_path=["results/map_elites_experiment"],
+        plot_fitness_curves=True,
+        generate_robot_images=True,
+        generate_full_gif=True,
+        generate_full_video=True,
+    )
+
+    visualizer.visualize(
+        experiment_data_path=["results/species_experiment"],
         plot_fitness_curves=True,
         generate_robot_images=True,
         generate_full_gif=True,

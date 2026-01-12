@@ -127,10 +127,8 @@ def visualize_species(zip_path: str, output_path: str):
 
     except Exception as e:
         print(f"An error occurred: {e}")
-        import traceback
-        traceback.print_exc()
 
 if __name__ == "__main__":
-    zip_file = r"c:\Marcin\Golem\robots_evolution\results\species_experiment\species_zip\species.zip"
-    output_file = r"c:\Marcin\Golem\robots_evolution\results\species_experiment\species_comparison.png"
+    zip_file = "results/species_experiment/species_zip/species.zip"
+    output_file = "results/species_experiment/species_comparison.png"
     visualize_species(zip_file, output_file)
