@@ -14,7 +14,7 @@ from controller import Controller
 from structure import Structure 
 
 
-def add_text_to_frame(frame, text):
+def add_text_to_frame(frame: np.ndarray, text: str) -> np.ndarray:
     """
     Adds text to the top-left corner of the frame.
     """
@@ -26,7 +26,7 @@ def add_text_to_frame(frame, text):
     return np.array(pil_im)
 
 
-def create_evolution_gif(experiment_dir, env_name='Walker-v0', steps_per_gen=100, fps=30, output_filename='evolution_timelapse.gif'):
+def create_evolution_gif(experiment_dir: str, env_name: str = 'Walker-v0', steps_per_gen: int = 100, fps: int = 30, output_filename: str = 'evolution_timelapse.gif') -> None:
     """
     Creates a GIF showing the evolution of structures over generations.
     
@@ -148,7 +148,7 @@ def create_evolution_gif(experiment_dir, env_name='Walker-v0', steps_per_gen=100
     print(f"Done! Your timelapse is at: {output_path}")
 
 
-def main():
+def main() -> None:
     """
     Example usage: python make_gif.py path/to/experiment_dir_or_zip --fps 30 --steps-per-gen 100 --output-filename evolution_timelapse.gif
     """

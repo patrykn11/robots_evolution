@@ -20,7 +20,7 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         env_type: str = 'Walker-v0',
         pop_size: int = 100,
         generations: int = 80,
-    ):
+    ) -> None:
         super().__init__(
             experiment_name,
             pop_size,
@@ -40,10 +40,10 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         diff = np.sum(ind1.body != ind2.body)
         return diff / 25.0
 
-    def prepare_generation(self):
+    def prepare_generation(self) -> None:
         self._speciate()
 
-    def _speciate(self):
+    def _speciate(self) -> None:
         for s in self.species:
             if len(s.members) > 0:
                 s.representative = copy.deepcopy(random.choice(s.members))
@@ -140,7 +140,7 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
 
         return next_gen
 
-    def run(self) -> Structure:
+    def run(self) -> Structure | None:
         history = {"best_fitness": [], "avg_fitness": []}
 
         with multiprocessing.Pool(processes=self.num_workers) as pool:

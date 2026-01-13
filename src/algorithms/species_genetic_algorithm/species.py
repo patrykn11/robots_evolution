@@ -3,14 +3,14 @@ import numpy as np
 
 
 class Species:
-    def __init__(self, representative):
+    def __init__(self, representative: "Structure") -> None:
         self.representative = copy.deepcopy(representative)
         self.members = []
         self.avg_fitness = 0
         self.best_fitness = -np.inf
         self.staleness = 0
 
-    def add_member(self, ind):
+    def add_member(self, ind: "Structure") -> None:
         self.members.append(ind)
         if ind.fitness > self.best_fitness:
             self.best_fitness = ind.fitness

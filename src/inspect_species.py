@@ -5,7 +5,7 @@ import sys
 
 sys.path.append(os.path.join(os.getcwd(), 'src'))
 
-def inspect_species_zip(zip_path: str):
+def inspect_species_zip(zip_path: str) -> None:
     print(f"Inspecting {zip_path}")
     try:
         with zipfile.ZipFile(zip_path, 'r') as zip_ref:

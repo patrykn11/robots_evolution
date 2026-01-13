@@ -26,10 +26,10 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         robot_shape: Tuple[int, int] = (5, 5),
         voxel_types: List[int] = [0, 1, 2, 3, 4], 
         env_type: str = 'Walker-v0',
-        generations=1000,           
-        grid_size=20,              
-        pop_size=100       
-    ):
+        generations: int = 1000,           
+        grid_size: int = 20,              
+        pop_size: int = 100       
+    ) -> None:
         super().__init__(
             experiment_name,
             pop_size=pop_size,
@@ -47,7 +47,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         self.do_boost: bool = False
         
         
-    def _get_robot_thumbnail(self, body_matrix):
+    def _get_robot_thumbnail(self, body_matrix: np.ndarray) -> np.ndarray:
         rows, cols = body_matrix.shape
         img = np.ones((rows, cols, 3)) 
         
@@ -67,7 +67,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
                     
         return img
     
-    def visualize_showcase(self, filename="showcase_map_PERCENT.png", num_samples=8):
+    def visualize_showcase(self, filename: str = "showcase_map_PERCENT.png", num_samples: int = 8) -> None:
         heatmap_data = np.full((self.grid_size, self.grid_size), np.nan)
         for (x, y, z), robot in self.archive.items():
             current_val = heatmap_data[y, x] 
@@ -214,23 +214,23 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
 
         return (x_idx, y_idx, z_idx)
 
-    def _random_selection(self, keys: list[Tuple]) -> Structure:
+    def _random_selection(self, keys: List[Tuple[int, int, int]]) -> Structure:
         random_key = random.choice(keys)
         return self.archive[random_key]
 
-    def _tournament_selection(self, keys: list[Tuple], tournament_size: int = 5) -> Structure:
+    def _tournament_selection(self, keys: List[Tuple[int, int, int]], tournament_size: int = 5) -> Structure:
         candidate_keys = random.sample(keys, min(len(keys), tournament_size))
         best_key = max(candidate_keys,  key = lambda k: self.archive[k].fitness)
         return self.archive[best_key]
     
-    def _exponential_selection(self, keys: list[Tuple]) -> Structure:
+    def _exponential_selection(self, keys: List[Tuple[int, int, int]]) -> Structure:
         candidtaes = [self.archive[k] for k in keys]
         fitnesses = np.array([rob.fitness for rob in candidtaes])
         weights = np.exp(fitnesses- np.max(fitnesses))
         
         return random.choices(candidtaes, weights=weights, k=1)[0]
     
-    def warm_up(self, n_samples=1000):
+    def warm_up(self, n_samples: int = 1000) -> None:
         random_population = []
         
         print("Warming up...")
@@ -367,7 +367,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
             raise ValueError("Incorrect mutation strategy provided")
             
         return mutant
-    def run(self, mutation_strategy: int = 1, selection_strategy: str = "tournament", n_warm_up: int = 1000,  *args, **kwargs):
+    def run(self, mutation_strategy: int = 1, selection_strategy: str = "tournament", n_warm_up: int = 1000,  *args, **kwargs) -> Structure | None:
         history = {"best_fitness": [], "avg_fitness": [], "archive_size": []}
         
         self.warm_up(n_warm_up)
@@ -458,7 +458,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         self.zip_results()
         return self.top_10_robots[0] if self.top_10_robots else None
     
-    def visualize_archive(self, filename="fitness_heatmap.png"):
+    def visualize_archive(self, filename: str = "fitness_heatmap.png") -> None:
         heatmap_data = np.full((self.grid_size, self.grid_size), np.nan)
 
         for (x, y, z), robot in self.archive.items():
@@ -481,7 +481,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         
         plt.show()
     
-    def visualize_advanced(self, filename="heatmap_advanced.png", slices=4):
+    def visualize_advanced(self, filename: str = "heatmap_advanced.png", slices: int = 4) -> None:
         fig, axes = plt.subplots(2, 2, figsize=(18, 16))
         axes = axes.flatten()
         z_step = self.grid_size // slices
@@ -528,7 +528,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         plt.savefig(filename)
         plt.close()
     
-    def visualize_max_projection(self, filename="max_projection_heatmap.png", title_suffix=""):
+    def visualize_max_projection(self, filename: str = "max_projection_heatmap.png", title_suffix: str = "") -> None:
         projection_map = np.full((self.grid_size, self.grid_size), np.nan)
 
         for (x, y, z), robot in self.archive.items():
@@ -561,7 +561,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         plt.savefig(filename)
         plt.close() 
 
-    def _add_to_archive(self, robot: Structure):
+    def _add_to_archive(self, robot: Structure) -> None:
         coords = self.get_descriptors(robot)
         
         if coords not in self.archive:
@@ -573,7 +573,7 @@ class MAPElitesAlgorithm(BaseGeneticAlgorithm):
         
         self._update_top_10(robot)
 
-    def _update_top_10(self, robot: Structure):
+    def _update_top_10(self, robot: Structure) -> None:
         self.top_10_robots.append(copy.deepcopy(robot))
         self.top_10_robots.sort(key=lambda x: x.fitness, reverse=True)
         self.top_10_robots = self.top_10_robots[:10]

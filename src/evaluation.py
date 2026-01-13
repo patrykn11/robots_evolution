@@ -11,7 +11,7 @@ AMPLITUDE = 0.5
 OFFSET = 1.0
 
 
-def evaluate(structure: Structure, env_type) -> float:
+def evaluate(structure: Structure, env_type: str) -> float:
     if not structure.is_valid():
         return 0.0
     env = gym.make(env_type, body=structure.body)

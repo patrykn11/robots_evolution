@@ -14,13 +14,13 @@ from structure import Structure
 
 class ExperimentVisualizer:
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.data_path = None
         self.env_type = None
         self.history = None
         self.robots = None
 
-    def _load_data(self):
+    def _load_data(self) -> None:
         """
         Loads data from experiment directory, including history and robot structures.
         """
@@ -45,7 +45,7 @@ class ExperimentVisualizer:
                 print(f"Error opening zip file for {exp_name}: {e}")
                 continue
 
-    def _plot_fitness_curves(self):
+    def _plot_fitness_curves(self) -> None:
         """
         Plots fitness curves for all experiments loaded.
         """
@@ -91,7 +91,7 @@ class ExperimentVisualizer:
 
         print(f"Fitness curves saved to {save_path}")
 
-    def _generate_robot_images(self, every_n_generations: int):
+    def _generate_robot_images(self, every_n_generations: int) -> None:
         """
         Generates and saves images of robots at specified generation intervals.
         """
@@ -109,7 +109,7 @@ class ExperimentVisualizer:
                 robot.render_robot_and_save(image_path, env_type=self.env_type)
         print("Robot images generation completed.")
     
-    def _generate_full_gif(self):
+    def _generate_full_gif(self) -> None:
         """
         Generates full evolution GIFs for each experiment.
         """
@@ -127,7 +127,7 @@ class ExperimentVisualizer:
         print("GIF generation completed.")
 
     def generate_best_robot_video(self, experiment_path: str, output_filename: str = "best_robot.gif",
-                                  duration_steps: int = 500, fps: int = 30):
+                                  duration_steps: int = 500, fps: int = 30) -> None:
         """
         Generates a video of the best (last) robot from an experiment.
         
@@ -196,14 +196,14 @@ class ExperimentVisualizer:
 
     def visualize(
             self,
-            experiment_data_path,
+            experiment_data_path: str | List[str],
             plot_fitness_curves: bool = False,
             generate_robot_images: bool = False,
             generate_full_gif: bool = False,
             generate_full_video: bool = False,
             image_every_n_generations: int = 10,
             env_type: str = 'Walker-v0',
-    ):
+    ) -> None:
         """
         Main method to visualize experiment results.
 

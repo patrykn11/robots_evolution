@@ -4,7 +4,7 @@ from algorithms.default_genetic_algorithm.genetic_algorithm import GeneticAlgori
 from algorithms.MAPElites_genetic_algorithm.genetic_algorithm import MAPElitesAlgorithm
 
 
-def run_all_algorithms():
+def run_all_algorithms() -> None:
     """
     Here we define and run basic experiments for different genetic algorithms.
     """
@@ -36,8 +36,9 @@ def run_all_algorithms():
             "pop_size": 120,
         }
     )
-    
+
     runner.run_all()
+
 
 if __name__ == "__main__":
     run_all_algorithms()

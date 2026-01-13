@@ -3,17 +3,18 @@ import json
 import pickle
 import zipfile
 import glob
+from typing import Dict, Any, List
 
 
 class SavingMixin:
-    def save_history(self, history):
+    def save_history(self, history: Dict[str, Any]) -> None:
         if not hasattr(self, 'save_path'):
             return
 
         with open(os.path.join(self.save_path, "history.json"), "w") as f:
             json.dump(history, f, indent=4)
 
-    def save_robot(self, generation, robot):
+    def save_robot(self, generation: int, robot: Any) -> None:
         if not hasattr(self, 'save_path') or robot is None:
             return
 
@@ -23,7 +24,7 @@ class SavingMixin:
         ) as f:
             pickle.dump(robot, f)
 
-    def save_species_champions(self, generation, species_list):
+    def save_species_champions(self, generation: int, species_list: List[Any]) -> None:
         """Save best individual from each species to results/<exp>/species/"""
         if not hasattr(self, 'save_path'):
             return
@@ -41,7 +42,7 @@ class SavingMixin:
             with open(os.path.join(species_dir, filename), "wb") as f:
                 pickle.dump(champion, f)
 
-    def zip_results(self):
+    def zip_results(self) -> None:
         if not hasattr(self, 'save_path'):
             return
 

@@ -10,10 +10,10 @@ class ExperimentsRunner:
     Allows running multiple genetic algorithm configurations sequentially.
     """
     
-    def __init__(self):
+    def __init__(self) -> None:
         self.experiments = []
 
-    def add_experiment(self, algo_class, params):
+    def add_experiment(self, algo_class: Type[BaseGeneticAlgorithm], params: Dict[str, Any]) -> None:
         """
         Registers a single experiment to be run.
         
@@ -30,7 +30,7 @@ class ExperimentsRunner:
             "params": params
         })
 
-    def run_all(self):
+    def run_all(self) -> None:
         """
         Executes all registered experiments sequentially.
         """

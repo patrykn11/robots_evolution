@@ -14,7 +14,7 @@ sys.path.append(os.path.join(os.getcwd(), 'src'))
 from structure import Structure
 
 
-def visualize_species(zip_path: str, output_path: str):
+def visualize_species(zip_path: str, output_path: str) -> None:
     print(f"Processing {zip_path}...")
     
     species_data = defaultdict(list)

@@ -14,9 +14,9 @@ class GeneticAlgorithm(BaseGeneticAlgorithm):
         robot_shape: Tuple[int, int] = (5, 5),
         voxel_types: List[int] = [0, 1, 2, 3, 4],
         env_type: str = 'Walker-v0',
-        pop_size=80,
-        generations=50,
-    ):
+        pop_size: int = 80,
+        generations: int = 50,
+    ) -> None:
         super().__init__(
             experiment_name,
             pop_size=pop_size,

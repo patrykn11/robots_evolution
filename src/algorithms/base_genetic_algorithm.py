@@ -5,7 +5,7 @@ import os
 import pickle
 import json
 import copy
-from typing import List, Tuple
+from typing import List, Tuple, Any
 from evogym import sample_robot
 from structure import Structure
 from evaluation import evaluate
@@ -20,7 +20,7 @@ class BaseGeneticAlgorithm(SavingMixin):
         robot_shape: Tuple[int, int],
         voxel_types: List[int],
         env_type: str = 'Walker-v0',
-    ):
+    ) -> None:
         self.experiment_name = experiment_name
         self.save_path = os.path.join("results", self.experiment_name)
         os.makedirs(self.save_path, exist_ok=True)
@@ -40,7 +40,7 @@ class BaseGeneticAlgorithm(SavingMixin):
         body, _ = sample_robot(self.robot_shape)
         return Structure(body)
 
-    def evaluate_population(self, pool):
+    def evaluate_population(self, pool: multiprocessing.Pool) -> None:
         evaluate_with_env = partial(evaluate, env_type=self.env_type)
         fitness_scores = pool.map(evaluate_with_env, self.population)
         for ind, fit in zip(self.population, fitness_scores):
@@ -49,20 +49,20 @@ class BaseGeneticAlgorithm(SavingMixin):
                 self.best_fit = fit
                 self.best_robot = copy.deepcopy(ind)
     
-    def prepare_generation(self):
+    def prepare_generation(self) -> None:
         """Hook to be overridden by subclasses for generation-specific preparations (e.g., speciation)."""
         pass
 
-    def selection(self):
+    def selection(self) -> Any:
         raise NotImplementedError
 
-    def crossover(self, parents):
+    def crossover(self, parents: Any) -> List[Structure]:
         raise NotImplementedError
 
-    def mutate(self, offspring):
+    def mutate(self, offspring: List[Structure]) -> List[Structure]:
         raise NotImplementedError
 
-    def run(self) -> Structure:
+    def run(self) -> Structure | None:
         history = {"best_fitness": [], "avg_fitness": []}
 
         with multiprocessing.Pool(processes=self.num_workers) as pool:
