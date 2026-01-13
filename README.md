@@ -12,7 +12,7 @@ The project features three distinct evolutionary strategies:
 
 ## Setup
 
-1.  Ensure you have Python 3.9 installed.
+1.  Ensure you have Python 3.10 installed.
 2.  Install the required dependencies:
 
     ```bash
