@@ -38,4 +38,4 @@ def inspect_species_zip(zip_path: str) -> None:
         print(f"Error: {e}")
 
 if __name__ == "__main__":
-    inspect_species_zip(r"c:\Marcin\Golem\robots_evolution\results\species_experiment\species_zip\species.zip")
+    inspect_species_zip("results/species_experiment/species_zip/species.zip")
