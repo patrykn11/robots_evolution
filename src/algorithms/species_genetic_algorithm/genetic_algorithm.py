@@ -9,6 +9,11 @@ from algorithms.base_genetic_algorithm import BaseGeneticAlgorithm
 
 
 class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
+    """
+    Genetic Algorithm with speciation mechanism.
+
+    """
+
     def __init__(
         self,
         experiment_name: str,
@@ -21,6 +26,20 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         pop_size: int = 100,
         generations: int = 80,
     ) -> None:
+        """
+        Initialize the Species Genetic Algorithm.
+
+        Args:
+            experiment_name (str): Name of the experiment used for logging and saving results.
+            target_species (int): Desired number of species maintained during evolution.
+            mutation_rate (float): Probability of mutation applied to an individual.
+            crossover_probability (float): Probability of performing crossover between parents.
+            robot_shape (Tuple[int, int]): Shape of the robot body grid.
+            voxel_types (List[int]): Allowed voxel types for robot construction.
+            env_type (str): Simulation environment identifier.
+            pop_size (int): Population size.
+            generations (int): Number of generations to evolve.
+        """
         super().__init__(
             experiment_name,
             pop_size,
@@ -37,13 +56,36 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         self.species = []
 
     def get_distance(self, ind1: Structure, ind2: Structure) -> float:
+        """
+        Compute normalized morphological distance between two individuals.
+
+        Distance is defined as the proportion of differing voxels
+        between two robot body grids.
+
+        Args:
+            ind1 (Structure): First individual.
+            ind2 (Structure): Second individual.
+
+        Returns:
+            float: Normalized distance in range [0, 1].
+        """
         diff = np.sum(ind1.body != ind2.body)
         return diff / 25.0
 
     def prepare_generation(self) -> None:
+        """
+        Prepare population before selection by performing speciation.
+        """
         self._speciate()
 
     def _speciate(self) -> None:
+        """
+        Assign individuals to species based on morphological distance.
+
+        Species representatives are updated every generation.
+        The compatibility threshold is dynamically adjusted to maintain
+        a target number of species.
+        """
         for s in self.species:
             if len(s.members) > 0:
                 s.representative = copy.deepcopy(random.choice(s.members))
@@ -72,6 +114,15 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         self.threshold = max(0.05, self.threshold)
 
     def selection(self) -> List[Species]:
+        """
+        Perform fitness sharing and select species for reproduction.
+
+        Adjusted fitness is computed for each individual to reduce
+        dominance of large species.
+
+        Returns:
+            List[Species]: List of species after fitness adjustment.
+        """
         for s in self.species:
             n = len(s.members)
             for ind in s.members:
@@ -86,6 +137,18 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         return self.species
 
     def crossover(self, species_list: List[Species]) -> List[Structure]:
+        """
+        Generate a new population using species-based crossover.
+
+        Offspring count per species is proportional to its average fitness.
+        Elitism is applied by preserving the best individual.
+
+        Args:
+            species_list (List[Species]): Species selected for reproduction.
+
+        Returns:
+            List[Structure]: New population of individuals.
+        """
         new_population = [copy.deepcopy(self.best_robot)]
         total_avg_fit = sum(s.avg_fitness for s in species_list) or 1.0
 
@@ -112,6 +175,18 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         return new_population
 
     def _do_crossover_body(self, p1: Structure, p2: Structure) -> Structure:
+        """
+        Perform body-level crossover between two parent individuals.
+
+        A random axis and cut point are selected to exchange body segments.
+
+        Args:
+            p1 (Structure): First parent.
+            p2 (Structure): Second parent.
+
+        Returns:
+            Structure: Child individual after crossover.
+        """
         child_body = p1.body.copy()
         axis = np.random.randint(0, 2)
         cut = np.random.randint(1, self.robot_shape[axis])
@@ -125,6 +200,18 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         return child if child.is_valid() else copy.deepcopy(p1)
 
     def mutate(self, next_gen: List[Structure]) -> List[Structure]:
+        """
+        Apply mutation to the next generation.
+
+        Random voxel mutations are applied while preserving validity.
+        The best individual is protected from mutation (elitism).
+
+        Args:
+            next_gen (List[Structure]): Population after crossover.
+
+        Returns:
+            List[Structure]: Mutated population.
+        """
         for ind in next_gen:
             if ind == self.best_robot:
                 continue
@@ -141,6 +228,16 @@ class SpeciesGeneticAlgorithm(BaseGeneticAlgorithm):
         return next_gen
 
     def run(self) -> Structure | None:
+        """
+        Execute the full evolutionary process.
+
+        Evaluation is parallelized using multiprocessing.
+        Statistics, best individuals, and species champions
+        are periodically saved.
+
+        Returns:
+            Structure | None: Best evolved individual.
+        """
         history = {"best_fitness": [], "avg_fitness": []}
 
         with multiprocessing.Pool(processes=self.num_workers) as pool:
